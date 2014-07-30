@@ -4,7 +4,7 @@
 #include <rtc/DTLS.h>
 #include <rtc/Connection.h>
 #include <ice/ICE.h>
-#include <ice/STUN.h>
+#include <stun/Reader.h>
 #include <ice/Utils.h>
 #include <sdp/Types.h>
 #include <sdp/SDP.h>
@@ -12,6 +12,7 @@
 #include <sdp/Writer.h>
 
 static void on_udp_data(uint8_t* data, uint32_t nbytes, void* user); /* gets called when we recieve data on our 'candidate' */
+static void on_stun_message(stun::Message* msg, void* user);         /* gets called when we receive a stun message */
 
 int main() {
 
@@ -31,9 +32,10 @@ int main() {
   }
 
   /* parse the input */
+  ice::ICE ice;
   rtc::DTLS dtls; 
   rtc::ConnectionUDP sock;
-  stun::STUN stun;
+  stun::Reader stun;
  
   sdp::SDP offer;
   sdp::Reader reader;
@@ -106,6 +108,8 @@ int main() {
   }
   sock.on_data = on_udp_data;
   sock.user = (void*)&stun;
+  stun.on_message = on_stun_message;
+  stun.user = (void*)&ice;
 
   /* start receiving data */
   while (true) {
@@ -116,6 +120,12 @@ int main() {
 }
 
 static void on_udp_data(uint8_t* data, uint32_t nbytes, void* user) {
-  stun::STUN* stun = static_cast<stun::STUN*>(user);
+  stun::Reader* stun = static_cast<stun::Reader*>(user);
   stun->process(data, nbytes);
+}
+
+static void on_stun_message(stun::Message* msg, void* user) {
+  printf("Message.\n");
+  ice::ICE* ice = static_cast<ice::ICE*>(user);
+  ice->handleMessage(msg);
 }

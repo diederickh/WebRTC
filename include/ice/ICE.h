@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <stun/Message.h>
 
 namespace ice {
 
@@ -11,7 +12,10 @@ namespace ice {
     ICE();
     //    void addCandidate(std::string c); /* add a a=candidate: .. */
     std::string getSDP();             /* returns the SDP for the ICE elements */
-    void process(uint8_t* data, uint32_t nbytes);
+    void handleMessage(stun::Message* msg);
+
+  private:
+    void handleBindingRequest(stun::Message* msg);
 
   public:
     //std::vector<std::string> candidates;

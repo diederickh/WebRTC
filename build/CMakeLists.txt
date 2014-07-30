@@ -26,8 +26,11 @@ set(lib_sources
   ${sd}/sdp/Types.cpp
   ${sd}/sdp/Reader.cpp
   ${sd}/sdp/Writer.cpp
+  ${sd}/stun/Reader.cpp
+  ${sd}/stun/Message.cpp
+  ${sd}/stun/Attribute.cpp
+  ${sd}/stun/Types.cpp
   ${sd}/ice/ICE.cpp
-  ${sd}/ice/STUN.cpp
   ${sd}/ice/Utils.cpp
   ${sd}/rtc/DTLS.cpp
   ${sd}/rtc/Connection.cpp
