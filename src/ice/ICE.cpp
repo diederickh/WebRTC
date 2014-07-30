@@ -2,14 +2,12 @@
 
 namespace ice {
 
-  ICE::ICE() {
+  ICE::ICE() 
+    :on_data(NULL)
+    ,user(NULL)
+  {
   }
 
-  /*
-  void ICE::addCandidate(std::string c) {
-    candidates.push_back(c);
-  }
-  */
 
   void ICE::handleMessage(stun::Message* msg) {
 
@@ -30,7 +28,17 @@ namespace ice {
   }
 
   void ICE::handleBindingRequest(stun::Message* msg) {
+   
     stun::Message resp(stun::STUN_BINDING_RESPONSE);
+    resp.addAttribute(new stun::Username("diederick"));
+    resp.copyTransactionID(msg);
+
+    stun::Writer writer;
+    writer.writeMessage(&resp);
+    
+    if (on_data) {
+      on_data(&writer.buffer[0], writer.buffer.size(), user);
+    }
   }
 
 } /* namespace ice */

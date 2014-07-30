@@ -27,6 +27,7 @@ set(lib_sources
   ${sd}/sdp/Reader.cpp
   ${sd}/sdp/Writer.cpp
   ${sd}/stun/Reader.cpp
+  ${sd}/stun/Writer.cpp
   ${sd}/stun/Message.cpp
   ${sd}/stun/Attribute.cpp
   ${sd}/stun/Types.cpp

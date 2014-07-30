@@ -4,21 +4,23 @@
 #include <string>
 #include <vector>
 #include <stun/Message.h>
+#include <stun/Writer.h>
 
 namespace ice {
+
+  typedef void(*ice_on_data_callback)(uint8_t* data, uint32_t nbytes, void* user);  /* is called with data that needs to be send to the I/O that is using the ICE features */
 
   class ICE {
   public:
     ICE();
-    //    void addCandidate(std::string c); /* add a a=candidate: .. */
-    std::string getSDP();             /* returns the SDP for the ICE elements */
-    void handleMessage(stun::Message* msg);
+    void handleMessage(stun::Message* msg);            /* handles an STUN message you received from the other agent. */
 
   private:
     void handleBindingRequest(stun::Message* msg);
 
   public:
-    //std::vector<std::string> candidates;
+    ice_on_data_callback on_data;
+    void* user;
   };
 
 } /* namespace ice */

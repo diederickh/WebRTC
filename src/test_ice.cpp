@@ -11,8 +11,9 @@
 #include <sdp/Reader.h>
 #include <sdp/Writer.h>
 
-static void on_udp_data(uint8_t* data, uint32_t nbytes, void* user); /* gets called when we recieve data on our 'candidate' */
-static void on_stun_message(stun::Message* msg, void* user);         /* gets called when we receive a stun message */
+static void on_udp_data(uint8_t* data, uint32_t nbytes, void* user);  /* gets called when we recieve data on our 'candidate' */
+static void on_stun_message(stun::Message* msg, void* user);          /* gets called when we receive a stun message */
+static void on_ice_data(uint8_t* data, uint32_t nbytes, void* user);  /* gets called when we need to send ICE related data */
 
 int main() {
 
@@ -110,6 +111,8 @@ int main() {
   sock.user = (void*)&stun;
   stun.on_message = on_stun_message;
   stun.user = (void*)&ice;
+  ice.on_data = on_ice_data;
+  ice.user = (void*)&sock;
 
   /* start receiving data */
   while (true) {
@@ -128,4 +131,10 @@ static void on_stun_message(stun::Message* msg, void* user) {
   printf("Message.\n");
   ice::ICE* ice = static_cast<ice::ICE*>(user);
   ice->handleMessage(msg);
+}
+
+static void on_ice_data(uint8_t* data, uint32_t nbytes, void* user) {
+  rtc::ConnectionUDP* sock = static_cast<rtc::ConnectionUDP*>(user);
+  printf("Must send %u bytes back to ICE sock.\n", nbytes);
+  sock->send(data, nbytes);
 }

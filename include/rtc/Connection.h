@@ -33,7 +33,7 @@ namespace rtc {
     ConnectionUDP();
     bool bind(std::string ip, uint16_t port);
     void update();
-    
+    void send(uint8_t* data, uint32_t nbytes);
 
   public:
     struct sockaddr_in addr;
