@@ -1,4 +1,8 @@
 #include <stun/Reader.h>
+#include <openssl/engine.h>
+#include <openssl/hmac.h>
+#include <openssl/evp.h>
+
 
 namespace stun {
 
@@ -40,6 +44,8 @@ namespace stun {
     if (buffer.size() < 20) {
       return;
     }
+    printf("Data to process: %u bytes, %lu.\n", nbytes, buffer.size());
+
     
     /* create the base message */
     Message msg;
@@ -57,16 +63,16 @@ namespace stun {
       return;
     }
 
-    printf("Message length: %d\n", msg.length);
-
     /* parse the rest of the message */
     int c = 0;
     uint16_t attr_type;
     uint16_t attr_length;
+    uint32_t prev_dx;
     
     while (bytesLeft() >= 4) {
-
+      
       Attribute* attr = NULL;
+      prev_dx = dx;
       attr_type = readU16();
       attr_length = readU16();
 
@@ -77,8 +83,6 @@ namespace stun {
              bytesLeft(), 
              dx);
 
-#if 1      
-      
       switch (attr_type) {
 
         /* no parsing needed for these */
@@ -93,6 +97,20 @@ namespace stun {
           break;
         }
 
+        case STUN_ATTR_SOFTWARE: { 
+          Software* software = new Software();
+          software->value = readString(attr_length);
+          attr = (Attribute*) software;
+          break;
+        }
+
+        case STUN_ATTR_XOR_MAPPED_ADDRESS: {
+          XorMappedAddress* address = readXorMappedAddress();
+          if (address) {
+            attr = (Attribute*) address;
+          }
+          break;
+        }
 
         case STUN_ATTR_PRIORITY: {
           skip(4); /* skip priority for now: http://tools.ietf.org/html/rfc5245#section-4.1.2.1 */
@@ -100,7 +118,11 @@ namespace stun {
         } 
 
         case STUN_ATTR_MESSAGE_INTEGRITY: {     
-          skip(20); /* SHA-1 message integrity */
+          MessageIntegrity* integ = new MessageIntegrity();
+          memcpy(integ->sha1, &buffer[dx], 20);
+          integ->offset = dx - 4;
+          attr = (Attribute*) integ;
+          skip(20);
           break;
         }
 
@@ -116,22 +138,28 @@ namespace stun {
         }
 
         default: {
-          printf("Warning: unhandled STUN attribute %d of length: %u\n", attr_type, attr_length);
+          printf("Warning: unhandled STUN attribute %s of length: %u\n", attribute_type_to_string(attr_type).c_str(), attr_length);
           break;
         }
       }
 
-      if (attr) {
-        msg.addAttribute(attr);
-      }
-#else 
-      dx += attr_length;
-#endif
-      
       /* Padding: http://tools.ietf.org/html/rfc5389#section-15, must be 32bit aligned */
       while ( (dx & 0x03) != 0 && bytesLeft() > 0) {
         dx++;
       }
+
+      /* when we parsed an attribute, we set the members and append it to the message */
+      if (attr) {
+        attr->length = attr_length;
+        attr->type = attr_type;
+        attr->nbytes = dx - prev_dx;
+        msg.addAttribute(attr);
+      }
+
+      /* reset vars used while parsing */
+      attr = NULL;
+      attr_length = 0;
+      prev_dx = dx;
     }
 
     /* and erase any read data. */
@@ -149,6 +177,11 @@ namespace stun {
     }
 
     return buffer.size() - dx;
+  }
+
+  uint8_t Reader::readU8() {
+    dx++;
+    return buffer[dx - 1];
   }
 
   uint16_t Reader::readU16() {
@@ -209,6 +242,66 @@ namespace stun {
     std::copy(ptr(), ptr() + len, std::back_inserter(v.buffer));
     dx += len;
     return v;
+  }
+
+  /* See http://tools.ietf.org/html/rfc5389#section-15.2 */
+  XorMappedAddress* Reader::readXorMappedAddress() {
+
+    if (bytesLeft() < 8) {
+      printf("Error: cannot read a XorMappedAddress as the buffer is too small in stun::Reader.\n");
+      return NULL;
+    }
+    
+    XorMappedAddress* addr = new XorMappedAddress();
+    uint32_t ip = 0;
+    uint8_t cookie[] = { 0x42, 0xA4, 0x12, 0x21 }; 
+    uint8_t* port_ptr = (uint8_t*) &addr->port;
+    uint8_t* ip_ptr = (uint8_t*) &ip;
+    unsigned char ip_addr[16];
+
+    /* skip the first byte */
+    skip(1); 
+
+    /* read family: 0x01 = IP4, 0x02 = IP6 */
+    addr->family = readU8();
+    if (addr->family != 0x01 && addr->family != 0x02) {
+      printf("Error: invalid family for the xor mapped address in stun::Reader.\n");
+      delete addr;
+      return NULL;
+    }
+
+    /* read the port. */
+    addr->port = readU16();
+    port_ptr[0] = port_ptr[0] ^ cookie[2];
+    port_ptr[1] = port_ptr[1] ^ cookie[3];
+
+    /* read the address part. */
+    if (addr->family == 0x01) {
+
+      ip = readU32();
+
+      ip_ptr[0] = ip_ptr[0] ^ cookie[0];
+      ip_ptr[1] = ip_ptr[1] ^ cookie[1];
+      ip_ptr[2] = ip_ptr[2] ^ cookie[2];
+      ip_ptr[3] = ip_ptr[3] ^ cookie[3];
+
+      sprintf((char*)ip_addr, "%u.%u.%u.%u", ip_ptr[3], ip_ptr[2], ip_ptr[1], ip_ptr[0]);
+
+      std::copy(ip_addr, ip_addr + 16, std::back_inserter(addr->address));
+    }
+    else if (addr->family == 0x02) {
+      /* @todo read the address for ipv6 in stun::Reader::readXorMappedAddress(). */
+      printf("Warning: we have to implement the IPv6 address in stun::Reader.\n");
+      delete addr;
+      return NULL;
+    }
+    else {
+      printf("Warning: we shouldn't arrive here in stun::Reader.\n");
+      delete addr;
+      return NULL;
+    }
+
+    return addr;
   }
 
   uint8_t* Reader::ptr() {

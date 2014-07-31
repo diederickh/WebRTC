@@ -38,17 +38,20 @@ namespace stun {
 
   /* --------------------------------------------------------------------- */
 
-
   class Reader {
+
   public:
     Reader();
     void process(uint8_t* data, uint32_t nbytes);
+    std::string password;
 
   private:
+    uint8_t readU8();
     uint16_t readU16();                   /* read an uint16_t from the buffer, expecting the buffer to hold Big Endian data and moving the dx member. */
     uint32_t readU32();                   /* read an uint32_t from the buffer, expecting the buffer to hold Big Endian data and moving the dx member. */
     uint64_t readU64();                   /* read an uint64_t from the buffer, expecting the buffer to hold Big Endian data and moving the dx member. */
     StringValue readString(uint16_t len); /* read a StringValue from the current buffer */
+    XorMappedAddress* readXorMappedAddress();
     void skip(uint32_t nbytes);           /* skip the next nbytes. */    
     uint32_t bytesLeft();                 /* returns the number of bytes that still need to be parsed, this is not the same as the size of the buffer! */
     uint8_t* ptr();                       /* returns a pointer to the current read index of the buffer. */

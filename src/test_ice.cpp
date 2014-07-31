@@ -107,10 +107,13 @@ int main() {
   if (!sock.bind("192.168.0.194", 59976)) {
     exit(1);
   }
+
   sock.on_data = on_udp_data;
   sock.user = (void*)&stun;
   stun.on_message = on_stun_message;
   stun.user = (void*)&ice;
+  //stun.password = "0JEe+hko6bWO24SEoB0lHxQx"; /* copy & paste this from the offer */
+  stun.password = ice_pwd;
   ice.on_data = on_ice_data;
   ice.user = (void*)&sock;
 

@@ -39,6 +39,10 @@ namespace stun {
         writeUsername(static_cast<Username*>(attr)); 
         break; 
       } 
+      case STUN_ATTR_SOFTWARE: {
+        writeSoftware(static_cast<Software*>(attr));
+        break;
+      }
       default: {
         break;
       }
@@ -46,9 +50,15 @@ namespace stun {
   }
 
   void Writer::writeUsername(Username* u) {
-    writeU16(STUN_ATTR_USERNAME);
+    writeU16(u->type);
     writeU16(u->value.buffer.size());
     writeString(u->value);
+  }
+
+  void Writer::writeSoftware(Software* s) {
+    writeU16(s->type);
+    writeU16(s->value.buffer.size());
+    writeString(s->value);
   }
 
   void Writer::writeString(StringValue v) {

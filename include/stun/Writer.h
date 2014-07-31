@@ -15,6 +15,7 @@ namespace stun {
     void writeMessage(Message* msg);
     void writeAttribute(Attribute* attr);
     void writeUsername(Username* u);
+    void writeSoftware(Software* s);
     void writeU16(uint16_t v);
     void writeU32(uint32_t v);
     void writeString(StringValue v);

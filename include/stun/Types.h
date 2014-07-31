@@ -49,6 +49,7 @@ namespace stun {
   };
 
   /* --------------------------------------------------------------------- */
+
   std::string attribute_type_to_string(uint32_t t);
   std::string message_type_to_string(uint32_t t);
 

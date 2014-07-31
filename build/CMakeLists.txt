@@ -31,6 +31,7 @@ set(lib_sources
   ${sd}/stun/Message.cpp
   ${sd}/stun/Attribute.cpp
   ${sd}/stun/Types.cpp
+  ${sd}/stun/Utils.cpp
   ${sd}/ice/ICE.cpp
   ${sd}/ice/Utils.cpp
   ${sd}/rtc/DTLS.cpp
@@ -57,6 +58,16 @@ target_link_libraries("${test}${debug}" ${lib} ${app_libs})
 install(TARGETS "${test}${debug}" DESTINATION bin)
 
 set(test test_ssl_fingerprint)
+add_executable("${test}${debug}" ${sd}/${test}.cpp)
+target_link_libraries("${test}${debug}" ${lib} ${app_libs})
+install(TARGETS "${test}${debug}" DESTINATION bin)
+
+set(test test_hmac_sha1)
+add_executable("${test}${debug}" ${sd}/${test}.cpp)
+target_link_libraries("${test}${debug}" ${lib} ${app_libs})
+install(TARGETS "${test}${debug}" DESTINATION bin)
+
+set(test test_stun_message_integrity)
 add_executable("${test}${debug}" ${sd}/${test}.cpp)
 target_link_libraries("${test}${debug}" ${lib} ${app_libs})
 install(TARGETS "${test}${debug}" DESTINATION bin)
