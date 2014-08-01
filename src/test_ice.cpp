@@ -112,7 +112,6 @@ int main() {
   sock.user = (void*)&stun;
   stun.on_message = on_stun_message;
   stun.user = (void*)&ice;
-  //stun.password = "0JEe+hko6bWO24SEoB0lHxQx"; /* copy & paste this from the offer */
   stun.password = ice_pwd;
   ice.on_data = on_ice_data;
   ice.user = (void*)&sock;
@@ -132,6 +131,8 @@ static void on_udp_data(uint8_t* data, uint32_t nbytes, void* user) {
 
 static void on_stun_message(stun::Message* msg, void* user) {
   printf("Message.\n");
+  msg->computeMessageIntegrity("Q9wQj99nsQzldVI5ZuGXbEWRK5RhRXdC");
+
   ice::ICE* ice = static_cast<ice::ICE*>(user);
   ice->handleMessage(msg);
 }

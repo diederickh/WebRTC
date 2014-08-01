@@ -19,8 +19,8 @@ namespace stun {
   {
   }
 
-  /* @todo - we can optimize this part by not copying but setting pointers to the 
-             members of the Message. */
+  /* @todo Reader::process - we can optimize this part by not copying but setting pointers to the  members of the Message. */
+  /* @todo Reader::process - we need to implement the rules as described here: http://tools.ietf.org/html/rfc5389#section-7.3 */
   void Reader::process(uint8_t* data, uint32_t nbytes) {
 
     if (!data) {
@@ -87,6 +87,7 @@ namespace stun {
 
         /* no parsing needed for these */
         case STUN_ATTR_USE_CANDIDATE: {
+          attr = new Attribute();
           break;
         }
 
@@ -113,13 +114,21 @@ namespace stun {
         }
 
         case STUN_ATTR_PRIORITY: {
-          skip(4); /* skip priority for now: http://tools.ietf.org/html/rfc5245#section-4.1.2.1 */
+          /* priority now: http://tools.ietf.org/html/rfc5245#section-4.1.2.1 */
+          Priority* prio = new Priority();
+          prio->value = readU32();
+          attr = (Attribute*) prio;
           break;
         } 
 
         case STUN_ATTR_MESSAGE_INTEGRITY: {     
           MessageIntegrity* integ = new MessageIntegrity();
           memcpy(integ->sha1, &buffer[dx], 20);
+          printf("Received integrity: ");
+          for (int k = 0; k < 20; ++k) {
+            printf("%02X ", integ->sha1[k]);
+          }
+          printf("\n");
           integ->offset = dx - 4;
           attr = (Attribute*) integ;
           skip(20);
@@ -127,18 +136,29 @@ namespace stun {
         }
 
         case STUN_ATTR_FINGERPRINT: {
-          skip(4); /* CRC32-bit, see http://tools.ietf.org/html/rfc5389#section-15.5 */
+          /* CRC32-bit, see http://tools.ietf.org/html/rfc5389#section-15.5 */
+          Fingerprint* fp = new Fingerprint();
+          fp->crc = readU32();
+          attr = (Attribute*) fp;
           break;
         }
 
-        case STUN_ATTR_ICE_CONTROLLING:
         case STUN_ATTR_ICE_CONTROLLED: {
-          skip(8);
+          IceControlled* ic = new IceControlled();
+          ic->tie_breaker = readU64();
+          attr = (Attribute*) ic;
+          break;
+        }
+
+        case STUN_ATTR_ICE_CONTROLLING: {
+          IceControlling* ic = new IceControlling();
+          ic->tie_breaker = readU64();
+          attr = (Attribute*) ic;
           break;
         }
 
         default: {
-          printf("Warning: unhandled STUN attribute %s of length: %u\n", attribute_type_to_string(attr_type).c_str(), attr_length);
+          printf("ERROR: unhandled STUN attribute %s of length: %u, this will result in incorrect message integrity\n", attribute_type_to_string(attr_type).c_str(), attr_length);
           break;
         }
       }
@@ -222,6 +242,31 @@ namespace stun {
     return result;
   }
 
+  uint64_t Reader::readU64() {
+
+    if (bytesLeft() < 8) {
+      printf("Error: trying to readU64() in STUN, but the buffer is not big enough.\n");
+      return 0;
+    }
+
+    uint64_t result;
+    uint8_t* dst = (uint8_t*)&result;
+
+    dst[0] = buffer[dx + 7];
+    dst[1] = buffer[dx + 6];
+    dst[2] = buffer[dx + 5];
+    dst[3] = buffer[dx + 4];
+    dst[4] = buffer[dx + 3];
+    dst[5] = buffer[dx + 2];
+    dst[6] = buffer[dx + 1];
+    dst[7] = buffer[dx + 0];
+
+    dx += 8;
+
+    return result;
+  }
+
+
   void Reader::skip(uint32_t nbytes) {
     if (dx + nbytes > buffer.size()) {
       printf("Error: trying to skip %u bytes, but we only have %u left in STUN.\n", nbytes, bytesLeft());
@@ -264,7 +309,7 @@ namespace stun {
 
     /* read family: 0x01 = IP4, 0x02 = IP6 */
     addr->family = readU8();
-    if (addr->family != 0x01 && addr->family != 0x02) {
+    if (addr->family != STUN_IP4 && addr->family != STUN_IP6) {
       printf("Error: invalid family for the xor mapped address in stun::Reader.\n");
       delete addr;
       return NULL;
@@ -276,7 +321,7 @@ namespace stun {
     port_ptr[1] = port_ptr[1] ^ cookie[3];
 
     /* read the address part. */
-    if (addr->family == 0x01) {
+    if (addr->family == STUN_IP4) {
 
       ip = readU32();
 
@@ -289,7 +334,7 @@ namespace stun {
 
       std::copy(ip_addr, ip_addr + 16, std::back_inserter(addr->address));
     }
-    else if (addr->family == 0x02) {
+    else if (addr->family == STUN_IP6) {
       /* @todo read the address for ipv6 in stun::Reader::readXorMappedAddress(). */
       printf("Warning: we have to implement the IPv6 address in stun::Reader.\n");
       delete addr;

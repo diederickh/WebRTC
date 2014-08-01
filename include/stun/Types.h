@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include <string>
 
+#define STUN_IP4 0x01
+#define STUN_IP6 0x02
+
 namespace stun {
 
   enum MessageType {

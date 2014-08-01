@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <ice/ICE.h>
 
 namespace ice {
@@ -29,9 +30,23 @@ namespace ice {
 
   void ICE::handleBindingRequest(stun::Message* msg) {
    
+    /*
+    stun::XorMappedAddress* mapped_addr;
+    if (msg->find(&mapped_addr)) {
+      printf("Found a XorMappedAddress.\n");
+      ::exit(0);
+    }
+    else {
+      printf("We did not find a XorMappedAddress.\n");
+      ::exit(0);
+    }
+    */
+
     stun::Message resp(stun::STUN_BINDING_RESPONSE);
-    resp.addAttribute(new stun::Username("diederick"));
     resp.copyTransactionID(msg);
+    resp.addAttribute(new stun::XorMappedAddress("192.168.0.194", 59976));
+    resp.addAttribute(new stun::MessageIntegrity());
+    resp.addAttribute(new stun::Fingerprint());
 
     stun::Writer writer;
     writer.writeMessage(&resp);

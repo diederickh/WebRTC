@@ -1,5 +1,6 @@
 #include <stun/Message.h>
 #include <stun/Utils.h>
+#include <zlib.h>
 
 namespace stun {
 
@@ -46,11 +47,19 @@ namespace stun {
     return find<MessageIntegrity>(STUN_ATTR_MESSAGE_INTEGRITY, result);
   }
 
+  bool Message::find(XorMappedAddress** result) {
+    return find<XorMappedAddress>(STUN_ATTR_XOR_MAPPED_ADDRESS, result);
+  }
+
+  bool Message::find(Fingerprint** result) {
+    return find<Fingerprint>(STUN_ATTR_FINGERPRINT, result);
+  }
+
   bool Message::computeMessageIntegrity(std::string key) {
 
     MessageIntegrity* integ = NULL;
     size_t i;
-    uint16_t msg_size = 24;
+    uint16_t msg_size = 24; 
     uint8_t* size_ptr = (uint8_t*)&msg_size;
     uint8_t curr_size[2];
 
@@ -64,7 +73,7 @@ namespace stun {
       return false;
     }
 
-    /* compute the size that should be used for as Message-Length when computing the HMAC-SHA1 */
+    /* compute the size that should be used as Message-Length when computing the HMAC-SHA1 */
     for( i = 0; i < attributes.size(); ++i) {
       if (attributes[i]->type == STUN_ATTR_MESSAGE_INTEGRITY) {
         break;
@@ -79,7 +88,73 @@ namespace stun {
     buffer[3] = size_ptr[0];
 
     /* compute the sha */
-    return compute_hmac_sha1(&buffer[0], msg_size - 4, key, integ->sha1);
+    bool result = true;
+    if (!compute_hmac_sha1(&buffer[0], msg_size - 4, key, integ->sha1)) {
+      result = false;
+    }
+
+    /* and reset the size */
+    buffer[2] = curr_size[0];
+    buffer[3] = curr_size[1];
+
+    return result;
+  }
+
+  bool Message::computeFingerprint() {
+
+    Fingerprint* finger = NULL;
+    uint16_t msg_size = 8; /* size of fingerprint attribute, we break in the loop below; so we simply start with that because the message-length attribute needs to include this size. */
+    uint8_t* size_ptr = (uint8_t*)&msg_size;
+    uint8_t curr_size[2] = { 0 } ;
+    size_t i = 0;
+    
+    if (!attributes.size() || !find(&finger)) {
+      printf("Error: cannot compute fingerprint because there is not fingerprint attribute.\n");
+      return false;
+    }
+
+    /* compute the size that should be used as Message-Length when computing the CRC32 */
+    for( i = 0; i < attributes.size(); ++i) {
+      if (attributes[i]->type == STUN_ATTR_FINGERPRINT) {
+        break;
+      }
+      msg_size += attributes[i]->nbytes;
+    }
+
+    /* copy and rewrite the size */
+    curr_size[0] = buffer[2];
+    curr_size[1] = buffer[3];
+    buffer[2] = size_ptr[1];
+    buffer[3] = size_ptr[0];
+
+    /* calculate crc32 */
+    uint32_t checksum = crc32(0L, &buffer[0], msg_size + 12) ^ 0x5354554e;
+
+#if 0
+    printf("\n-------\n01: ");
+    int nl = 0, l = 1;
+    for (int k = 0; k < msg_size + 12; ++k, ++nl) {
+      if (nl == 4) {
+        printf("\n");
+        nl = 0;
+        l++;
+        printf("%02d: ", l);
+      }
+      printf("%02X ", buffer[k]);
+    }
+    printf("\n-------\n");
+#endif    
+
+    /* and reset the size */
+    buffer[2] = curr_size[0];
+    buffer[3] = curr_size[1];
+
+    //printf("Checksum: %04X\n", checksum);
+
+    /* and set the CRC32 value of the fingerprint attribute. */
+    finger->crc = checksum;
+    
+    return true;
   }
 
 } /* namespace stun */

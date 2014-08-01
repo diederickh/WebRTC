@@ -35,6 +35,7 @@ set(lib_sources
   ${sd}/ice/ICE.cpp
   ${sd}/ice/Utils.cpp
   ${sd}/rtc/DTLS.cpp
+
   ${sd}/rtc/Connection.cpp
 )
 
@@ -43,9 +44,10 @@ set(lib_headers
 )
 
 set(app_libs
-  ${extern_lib_dir}/libssl.a
-  ${extern_lib_dir}/libcrypto.a
-  ${extern_lib_dir}/libuv.a
+  ${extern_lib_dir}/libssl.a             # for hmac/sha/ssl
+  ${extern_lib_dir}/libcrypto.a          # for hmac/sha/ssl
+  ${extern_lib_dir}/libuv.a              # for networking
+  ${extern_lib_dir}/libz.a               # for crc32
 )
 
 add_library(${lib} STATIC ${lib_sources})
@@ -68,6 +70,17 @@ target_link_libraries("${test}${debug}" ${lib} ${app_libs})
 install(TARGETS "${test}${debug}" DESTINATION bin)
 
 set(test test_stun_message_integrity)
+add_executable("${test}${debug}" ${sd}/${test}.cpp)
+target_link_libraries("${test}${debug}" ${lib} ${app_libs})
+install(TARGETS "${test}${debug}" DESTINATION bin)
+
+
+set(test test_zlib_crc32)
+add_executable("${test}${debug}" ${sd}/${test}.cpp)
+target_link_libraries("${test}${debug}" ${lib} ${app_libs})
+install(TARGETS "${test}${debug}" DESTINATION bin)
+
+set(test test_stun_message_fingerprint)
 add_executable("${test}${debug}" ${sd}/${test}.cpp)
 target_link_libraries("${test}${debug}" ${lib} ${app_libs})
 install(TARGETS "${test}${debug}" DESTINATION bin)

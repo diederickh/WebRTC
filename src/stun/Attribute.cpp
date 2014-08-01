@@ -20,7 +20,48 @@ namespace stun {
     ,port(0)
   {
   }
+
+  XorMappedAddress::XorMappedAddress(std::string addr, uint16_t port, uint8_t fam)
+    :Attribute(STUN_ATTR_XOR_MAPPED_ADDRESS)
+    ,address(addr)
+    ,port(port)
+    ,family(fam)
+  {
+  }
+
+  /* --------------------------------------------------------------------- */
+
+  Fingerprint::Fingerprint()
+    :Attribute(STUN_ATTR_FINGERPRINT)
+    ,crc(0)
+  {
+    
+  }
   
+  /* --------------------------------------------------------------------- */
+
+  Priority::Priority()
+    :Attribute(STUN_ATTR_PRIORITY) 
+    ,value(0)
+  {
+  }
+
+  /* --------------------------------------------------------------------- */
+
+  IceControlled::IceControlled()
+    :Attribute(STUN_ATTR_ICE_CONTROLLED)
+    ,tie_breaker(0)
+  {
+  }
+
+  /* --------------------------------------------------------------------- */
+
+  IceControlling::IceControlling()
+    :Attribute(STUN_ATTR_ICE_CONTROLLING)
+    ,tie_breaker(0)
+  {
+  }
+
   /* --------------------------------------------------------------------- */
 
   MessageIntegrity::MessageIntegrity() 
@@ -31,7 +72,7 @@ namespace stun {
   }
 
   /* --------------------------------------------------------------------- */
-  
+
 
 
 } /* namespace stun */

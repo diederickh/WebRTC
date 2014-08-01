@@ -1,3 +1,14 @@
+/*
+
+  Message
+  --------
+
+  Represents a stun::Message. When you're using Message-Integrity and Fingerprint
+  attributes, make sure to call computeMessageIntegrity(), before you call computeFingerprint().
+  The fingerprint (crc32) is computer over the buffer including the message-integrity value, whne 
+  you don't compute this first, the crc will be incorrect.
+
+ */
 #ifndef STUN_MESSAGE_H
 #define STUN_MESSAGE_H
 
@@ -14,7 +25,10 @@ namespace stun {
     void copyTransactionID(Message* from);                     /* Copy the transaction ID from the given messsage. */
     void setTransactionID(uint32_t a, uint32_t b, uint32_t c); /* Set the transaction ID from the given values. */
     bool find(MessageIntegrity** result);                      /* Find a message integrity attribute. */
+    bool find(XorMappedAddress** result);                      /* Find a xor-mapped-address attribute.*/
+    bool find(Fingerprint** result);                           /* Find a fingerprint attrbiute. */
     bool computeMessageIntegrity(std::string key);             /* When the message contains a MessageIntegrity element, this will compute the HMAC-SHA1 message integrity. */
+    bool computeFingerprint();                                 /* When the message contains a Fingerprint attriute (must be added after the MessageInterity attribute), this will calculate and set CRC value. Important: make sure that you computer the fingerprint AFTER you've computed the message-integrity  */
 
     template<class T> bool find(uint16_t atype, T** result) {
       *result = NULL;
@@ -35,7 +49,6 @@ namespace stun {
     std::vector<Attribute*> attributes;
     std::vector<uint8_t> buffer;
   };
-
 
 } /* namespace stun */
 
