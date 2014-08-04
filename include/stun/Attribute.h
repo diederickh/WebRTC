@@ -18,6 +18,7 @@ namespace stun {
     uint16_t type;
     uint16_t length;    /* The number of bytes of the attribute data. This is the size w/o the padded bytes that are added when the the attribute is not padded to 32 bits. */
     uint16_t nbytes;    /* The number of bytes the attribute takes inside the buffer. Because the STUN message has to be padded on 32 bits the length may be different from the nbytes. Also, this nbytes includes the bytes of the type field and length field. */
+    uint32_t offset;    /* Byte offset where the header of the attribute starts in the Message::buffer. */
   };
 
   /* --------------------------------------------------------------------- */
@@ -96,7 +97,6 @@ namespace stun {
   public:
     MessageIntegrity();
     uint8_t sha1[20];
-    uint32_t offset;  /* byte offset where the header of this attribute starts in the Message::buffer; all bytes up to this offset should be used to compute the sha1 */
   };
 
 } /* namespace stun */

@@ -99,7 +99,7 @@ int main() {
 static void on_stun_message(stun::Message* msg, void* user) {
 
   printf("Successfully parsed a stun message.\n");
-
+  
   stun::MessageIntegrity* integ;
   if (msg->find(&integ)) { 
     

@@ -24,6 +24,9 @@ namespace stun {
   class Writer {
   public:
     void writeMessage(Message* msg);
+    void writeMessage(Message* msg, std::string messageIntegrityPassword);   /* When you call this, we assume that the message contains a MessageIntegrity attribute. We calculate the hmac-sha and rewrite our internal buffer. This also checks for a Fingerprint attribute; and computers + writes this crc32-value. */
+
+  private:
     void writeAttribute(Attribute* attr);
     void writeUsername(Username* u);
     void writeSoftware(Software* s);
@@ -40,6 +43,7 @@ namespace stun {
     void writeBytes(uint8_t* buf, uint32_t nbytes);
     void writeString(StringValue v);
     void rewriteU16(size_t index, uint16_t v);
+    void rewriteU32(size_t index, uint32_t v);
     
   public:
     std::vector<uint8_t> buffer;

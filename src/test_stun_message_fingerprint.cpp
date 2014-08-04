@@ -3,6 +3,7 @@
 #include <stun/Reader.h>
 #include <stun/Writer.h>
 
+#define PASSWD "VOkJxbRl1RmTxUk/WvJxBt"
 static void on_stun_message(stun::Message* msg, void* user);
 
 int main() {
@@ -27,6 +28,7 @@ int main() {
    "\xe5\x7a\x3b\xcf";
 
  int nl = 0;
+ printf("\nINPUT");
  printf("\n-----------\n");
  for (int i = 0; i < sizeof(req) - 1; ++i, ++nl) {
 
@@ -48,29 +50,27 @@ int main() {
 
 static void on_stun_message(stun::Message* msg, void* user) {
   printf("Received a stun message\n");
-  // msg->computeMessageIntegrity("VOkJxbRl1RmTxUk/WvJxBt");
-  msg->computeFingerprint();
-
-  /* test our writer */
+  
+  /* 
+     We write the message and calculate the message integrity + fingerprint.
+     Note, because the padded bytes of the source contain 0x20 values and we
+     use 0x00, our message integrity value and fingerprint value are different. 
+  */
   stun::Writer writer;
-  msg->addAttribute(new stun::XorMappedAddress("192.168.0.194", 59976));
-  writer.writeMessage(msg);
-
-  msg->computeMessageIntegrity("VOkJxbRl1RmTxUk/WvJxBt");
-  msg->computeFingerprint();
+  writer.writeMessage(msg, PASSWD);
 
  int nl = 0;
+ printf("\nOUTPUT");
  printf("\n-----------\n");
- for (int i = 0; i < msg->buffer.size(); ++i, ++nl) {
+ for (int i = 0; i < writer.buffer.size(); ++i, ++nl) {
 
    if (nl == 4) {
      printf("\n");
      nl=0;
    }
-   printf("%02X ", msg->buffer[i]);
+   printf("%02X ", writer.buffer[i]);
  }
+
  printf("\n-----------\n\n");
-
-
   
 }

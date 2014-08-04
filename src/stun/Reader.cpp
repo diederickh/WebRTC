@@ -67,12 +67,14 @@ namespace stun {
     int c = 0;
     uint16_t attr_type;
     uint16_t attr_length;
+    uint32_t attr_offset;
     uint32_t prev_dx;
     
     while (bytesLeft() >= 4) {
       
       Attribute* attr = NULL;
       prev_dx = dx;
+      attr_offset = dx; 
       attr_type = readU16();
       attr_length = readU16();
 
@@ -84,6 +86,7 @@ namespace stun {
              dx);
 
       switch (attr_type) {
+
 
         /* no parsing needed for these */
         case STUN_ATTR_USE_CANDIDATE: {
@@ -114,7 +117,7 @@ namespace stun {
         }
 
         case STUN_ATTR_PRIORITY: {
-          /* priority now: http://tools.ietf.org/html/rfc5245#section-4.1.2.1 */
+          /* priority: http://tools.ietf.org/html/rfc5245#section-4.1.2.1 */
           Priority* prio = new Priority();
           prio->value = readU32();
           attr = (Attribute*) prio;
@@ -129,7 +132,7 @@ namespace stun {
             printf("%02X ", integ->sha1[k]);
           }
           printf("\n");
-          integ->offset = dx - 4;
+          //integ->offset = dx - 4;
           attr = (Attribute*) integ;
           skip(20);
           break;
@@ -172,6 +175,7 @@ namespace stun {
       if (attr) {
         attr->length = attr_length;
         attr->type = attr_type;
+        attr->offset = attr_offset;
         attr->nbytes = dx - prev_dx;
         msg.addAttribute(attr);
       }

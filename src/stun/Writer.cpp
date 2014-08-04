@@ -1,3 +1,4 @@
+#include <stun/Utils.h>
 #include <stun/Writer.h>
 #include <arpa/inet.h> /* for inet_aton, not supported on windows, on win, use http://msdn.microsoft.com/en-us/library/cc805844%28VS.85%29.aspx */
 #include <stdio.h>
@@ -6,6 +7,54 @@
 
 namespace stun {
 
+  /*
+    This function will write the message and apply the given `messageIntegrityPassword`
+    to create the hmac-sha1 of the message. The whole message will be written into 
+    the internal 'buffer' member. 
+    
+    This function also checks if there is an STUN_ATTR_FINGERPRINT attribute; when 
+    found it will calcualte the CRC32 and put it into Writer::buffer.
+   */
+  void Writer::writeMessage(Message* msg, std::string messageIntegrityPassword) {
+    /*
+      the msg->computeMessageIntegrity is calculated 'over' the buffer of the Message 
+       object; not our internal buffer! We need to write into the buffer of the message. 
+    */ 
+    printf("We need to fix the stun::Writer // computeMessageIntegrity + computeFingerprint.\n");
+
+    /* first write all the attributes. */
+    writeMessage(msg);
+
+    /* calc the message integrity and write it. */
+    MessageIntegrity* mit = NULL;
+    uint8_t sha1[20] = { 0 };
+    if (msg->find(STUN_ATTR_MESSAGE_INTEGRITY, &mit)) {
+      if (compute_message_integrity(buffer, messageIntegrityPassword, sha1)) {
+        for(size_t i = 0; i < 20; ++i) {
+          buffer[mit->offset + 4 + i] = sha1[i];
+        }
+      }
+      else {
+        printf("Warning: couldn't write the message integrity value in stun::Writer.\n");
+      }
+    }
+    
+    /* when there is a fingerprint element we calc the crc too. */
+    Fingerprint* fp = NULL;
+    uint32_t crc = 0;
+    if (msg->find(STUN_ATTR_FINGERPRINT, &fp)) {
+      if (compute_fingerprint(buffer, crc)) {
+        rewriteU32(fp->offset + 3, crc);
+      }
+      else {
+        printf("Warning: couldn't write the message fingerprint in stun::Writer.\n");
+      }
+    }
+  }
+
+  /* 
+     Write a STUN message w/o computing the message integrity or fingerprint. 
+   */
   void Writer::writeMessage(Message* msg) {
 
     /* first make sure our buffer is cleared. */
@@ -29,6 +78,7 @@ namespace stun {
       
       writeAttribute(msg->attributes[i]);
 
+      msg->attributes[i]->offset = prev_length;
       msg->attributes[i]->length = (buffer.size() - prev_length) - 4; /* the -4 are the message-type and message-length bytes. */
 
       /* Padding: http://tools.ietf.org/html/rfc5389#section-15, must be 32bit aligned */
@@ -47,8 +97,9 @@ namespace stun {
       return;
     }
 
-    uint16_t message_size = buffer.size() - 20;
-    rewriteU16(2, message_size);
+    /* rewrite the message-length header. */
+    uint16_t message_len = buffer.size() - 20;
+    rewriteU16(2, message_len);
   }
 
   void Writer::writeAttribute(Attribute* attr) {
@@ -217,7 +268,7 @@ namespace stun {
 
   void Writer::rewriteU16(size_t dx, uint16_t v) {
 
-    if (dx >= buffer.size()) {
+    if ( (dx + 2) >= buffer.size()) {
       printf("Warning: trying to rewriteU16, but our buffer is too small to contain a u16.\n");
       return;
     }
@@ -225,6 +276,19 @@ namespace stun {
     uint8_t* p = (uint8_t*) &v;
     buffer[dx + 0] = p[1];
     buffer[dx + 1] = p[0];
+  }
+
+  void Writer::rewriteU32(size_t dx, uint32_t v) {
+    if ( (dx + 4) >= buffer.size()) {
+      printf("Warning: trying to rewrite U32 in stun::Writer::rewriteU32() but index is out of bounds.\n");
+      return;
+    }
+
+    uint8_t* p = (uint8_t*)&v;
+    buffer[dx + 0] = p[3];
+    buffer[dx + 1] = p[2];
+    buffer[dx + 2] = p[1];
+    buffer[dx + 3] = p[0];
   }
   
 } /* namespace stun */

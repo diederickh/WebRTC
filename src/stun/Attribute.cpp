@@ -9,6 +9,7 @@ namespace stun {
     :type(type)
     ,length(0)
     ,nbytes(0)
+    ,offset(0)
   {
   }
 
@@ -66,7 +67,6 @@ namespace stun {
 
   MessageIntegrity::MessageIntegrity() 
     :Attribute(STUN_ATTR_MESSAGE_INTEGRITY)
-    ,offset(0)
   {
     memset(sha1, 0x00, 20);
   }
