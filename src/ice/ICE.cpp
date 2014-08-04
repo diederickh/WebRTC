@@ -6,6 +6,7 @@ namespace ice {
   ICE::ICE() 
     :on_data(NULL)
     ,user(NULL)
+    ,port(59976) /* temp */
   {
   }
 
@@ -42,17 +43,39 @@ namespace ice {
     }
     */
 
-    stun::Message resp(stun::STUN_BINDING_RESPONSE);
-    resp.copyTransactionID(msg);
-    resp.addAttribute(new stun::XorMappedAddress("192.168.0.194", 59976));
-    resp.addAttribute(new stun::MessageIntegrity());
-    resp.addAttribute(new stun::Fingerprint());
+#if 0
+    /* STUN BINDING REQUEST */
+    {  
+      stun::Message resp(stun::STUN_BINDING_REQUEST);
+      resp.copyTransactionID(msg);
+      resp.addAttribute(new stun::MessageIntegrity());
+      resp.addAttribute(new stun::Fingerprint());
 
-    stun::Writer writer;
-    writer.writeMessage(&resp);
+      stun::Writer writer;
+      writer.writeMessage(&resp, password);
     
-    if (on_data) {
-      on_data(&writer.buffer[0], writer.buffer.size(), user);
+      if (on_data) {
+        on_data(&writer.buffer[0], writer.buffer.size(), user);
+      }
+    }
+#endif
+    
+    /* STUN BINDING RESPONSE */
+    {
+      stun::Message resp(stun::STUN_BINDING_RESPONSE);
+      resp.copyTransactionID(msg);
+      resp.addAttribute(new stun::XorMappedAddress("192.168.0.194", port));
+      resp.addAttribute(new stun::MessageIntegrity());
+      resp.addAttribute(new stun::Fingerprint());
+
+      stun::Writer writer;
+      writer.writeMessage(&resp, password);
+      printf("Writer.buffer.size() == %lu\n", writer.buffer.size());
+      //writer.writeMessage(&resp);
+    
+      if (on_data) {
+        on_data(&writer.buffer[0], writer.buffer.size(), user);
+      }
     }
   }
 

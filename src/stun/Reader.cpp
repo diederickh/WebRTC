@@ -15,6 +15,7 @@ namespace stun {
   Reader::Reader() 
     :dx(0)
     ,on_message(NULL)
+    ,on_pass_through(NULL)
     ,user(NULL)
   {
   }
@@ -32,11 +33,16 @@ namespace stun {
       return;
     }
 
-    /* @todo check first 2 bits */
-    //    if (buffer[0] != 0x00 || buffer[1] != 0x00) {
-    //      printf("Warning: no STUN message.\n");
-    //      return;
-    //    }
+    /* handle non-stun data (e.g. DTLS) */
+    if ( (data[0] & 0x03) != 0x00) {
+      if (on_pass_through) {
+        on_pass_through(data, nbytes, user);
+      }
+      else {
+        printf("Warning: received non-stun data (first two bits are not zero), and not on_pass_through handler set.\n");
+        return;
+      }
+    }
 
     std::copy(data, data + nbytes, std::back_inserter(buffer));
     

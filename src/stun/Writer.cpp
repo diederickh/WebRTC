@@ -44,7 +44,7 @@ namespace stun {
     uint32_t crc = 0;
     if (msg->find(STUN_ATTR_FINGERPRINT, &fp)) {
       if (compute_fingerprint(buffer, crc)) {
-        rewriteU32(fp->offset + 3, crc);
+        rewriteU32(fp->offset + 4, crc);
       }
       else {
         printf("Warning: couldn't write the message fingerprint in stun::Writer.\n");
@@ -268,7 +268,7 @@ namespace stun {
 
   void Writer::rewriteU16(size_t dx, uint16_t v) {
 
-    if ( (dx + 2) >= buffer.size()) {
+    if ( (dx + 2) > buffer.size()) {
       printf("Warning: trying to rewriteU16, but our buffer is too small to contain a u16.\n");
       return;
     }
@@ -279,7 +279,7 @@ namespace stun {
   }
 
   void Writer::rewriteU32(size_t dx, uint32_t v) {
-    if ( (dx + 4) >= buffer.size()) {
+    if ( (dx + 4) > buffer.size()) {
       printf("Warning: trying to rewrite U32 in stun::Writer::rewriteU32() but index is out of bounds.\n");
       return;
     }

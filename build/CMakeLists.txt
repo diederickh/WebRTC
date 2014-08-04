@@ -34,7 +34,8 @@ set(lib_sources
   ${sd}/stun/Utils.cpp
   ${sd}/ice/ICE.cpp
   ${sd}/ice/Utils.cpp
-  ${sd}/rtc/DTLS.cpp
+  ${sd}/dtls/Context.cpp
+  ${sd}/dtls/Parser.cpp
 
   ${sd}/rtc/Connection.cpp
 )
@@ -81,6 +82,11 @@ target_link_libraries("${test}${debug}" ${lib} ${app_libs})
 install(TARGETS "${test}${debug}" DESTINATION bin)
 
 set(test test_stun_message_fingerprint)
+add_executable("${test}${debug}" ${sd}/${test}.cpp)
+target_link_libraries("${test}${debug}" ${lib} ${app_libs})
+install(TARGETS "${test}${debug}" DESTINATION bin)
+
+set(test test_openssl_load_key_and_cert)
 add_executable("${test}${debug}" ${sd}/${test}.cpp)
 target_link_libraries("${test}${debug}" ${lib} ${app_libs})
 install(TARGETS "${test}${debug}" DESTINATION bin)

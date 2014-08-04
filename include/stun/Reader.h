@@ -34,7 +34,8 @@ namespace stun {
   class Attribute;
   class Message;
 
-  typedef void(*stun_on_message_callback)(Message* msg, void* user);
+  typedef void(*stun_on_message_callback)(Message* msg, void* user);                        /* is called when we successfully parse a stun messge. */
+  typedef void(*stun_on_pass_through)(uint8_t* data, uint32_t nbytes, void* user);          /* is called when the data given to the reader is not a stun message */
 
   /* --------------------------------------------------------------------- */
 
@@ -58,6 +59,7 @@ namespace stun {
     
   public:
     stun_on_message_callback on_message;
+    stun_on_pass_through on_pass_through;
     void* user;
     std::vector<uint8_t> buffer;
     size_t dx;

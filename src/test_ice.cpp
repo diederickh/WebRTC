@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fstream>
-#include <rtc/DTLS.h>
+#include <dtls/Context.h>
+#include <dtls/Parser.h>
 #include <rtc/Connection.h>
 #include <ice/ICE.h>
 #include <stun/Reader.h>
@@ -11,9 +12,17 @@
 #include <sdp/Reader.h>
 #include <sdp/Writer.h>
 
-static void on_udp_data(uint8_t* data, uint32_t nbytes, void* user);  /* gets called when we recieve data on our 'candidate' */
-static void on_stun_message(stun::Message* msg, void* user);          /* gets called when we receive a stun message */
-static void on_ice_data(uint8_t* data, uint32_t nbytes, void* user);  /* gets called when we need to send ICE related data */
+#define PASSWORD "Q9wQj99nsQzldVI5ZuGXbEWRK5RhRXdC"  /* our ice-pwd value */
+
+static void on_udp_data(uint8_t* data, uint32_t nbytes, void* user);             /* gets called when we recieve data on our 'candidate' */
+static void on_stun_message(stun::Message* msg, void* user);                     /* gets called when we receive a stun message */
+static void on_stun_pass_through(uint8_t* data, uint32_t nbytes, void* user);    /* gets called when we received some data which isn't a stun message, e.g. DTLS handshake. */
+static void on_ice_data(uint8_t* data, uint32_t nbytes, void* user);             /* gets called when we need to send ICE related data */
+static void on_dtls_data(uint8_t* data, uint32_t nbytes, void* user);            /* gets called when we need to send DTLS related data */ 
+
+rtc::ConnectionUDP* udp_ptr = NULL;
+ice::ICE* ice_ptr = NULL;
+dtls::Parser* dtls_parser_ptr = NULL;
 
 int main() {
 
@@ -34,7 +43,8 @@ int main() {
 
   /* parse the input */
   ice::ICE ice;
-  rtc::DTLS dtls; 
+  dtls::Context dtls_ctx; 
+  dtls::Parser dtls_parser;
   rtc::ConnectionUDP sock;
   stun::Reader stun;
  
@@ -48,6 +58,10 @@ int main() {
   std::string ice_pwd;
   std::string fingerprint;
 
+  udp_ptr = &sock;
+  ice_ptr = &ice;
+  dtls_parser_ptr = &dtls_parser;
+
   if (reader.parse(input_sdp, &offer) < 0) {
     printf("Error: cannot parse input SDP.\n");
     exit(1);
@@ -56,12 +70,18 @@ int main() {
   /* manipulate the offer so we can use it as an answer. */
   {
     
-    if (!dtls.createKeyAndCertificate()) {
+    if (!dtls_ctx.init("./server-cert.pem", "./server-key.pem")) {
       exit(2);
     }
 
-    if (!dtls.createFingerprint(fingerprint)) {
-      exit(3);
+    dtls_parser.ssl = dtls_ctx.createSSL();
+    if(!dtls_parser.init()) {
+      printf("Cannot init the dtls parser.\n");
+      exit(1);
+    }
+    if (!dtls_ctx.createFingerprint(fingerprint)) {
+      printf("Error: cannot create dtls/fingerprint sdp attribute.\n");
+      exit(1);
     }
     
     ice_ufrag = ice::gen_random_string(10);
@@ -111,10 +131,14 @@ int main() {
   sock.on_data = on_udp_data;
   sock.user = (void*)&stun;
   stun.on_message = on_stun_message;
+  stun.on_pass_through = on_stun_pass_through;
   stun.user = (void*)&ice;
   stun.password = ice_pwd;
   ice.on_data = on_ice_data;
   ice.user = (void*)&sock;
+  ice.password = PASSWORD;
+  dtls_parser.on_data = on_dtls_data;
+  dtls_parser.user = (void*)&dtls_parser;
 
   /* start receiving data */
   while (true) {
@@ -130,15 +154,50 @@ static void on_udp_data(uint8_t* data, uint32_t nbytes, void* user) {
 }
 
 static void on_stun_message(stun::Message* msg, void* user) {
-  printf("Message.\n");
-  msg->computeMessageIntegrity("Q9wQj99nsQzldVI5ZuGXbEWRK5RhRXdC");
+
+  /* Test: Set the port for the xor-mapped-address response, so the 
+           browser will start listening on this port; 
+  */
+#if 0     
+  if (ice_ptr && udp_ptr && udp_ptr->saddr) {
+    if (udp_ptr->saddr->sa_family != AF_INET) {
+      printf("Invalid sockaddr struct.\n");
+      exit(1);
+    }
+
+    ice_ptr->port = ntohs(((struct sockaddr_in*)udp_ptr->saddr)->sin_port);
+    
+    printf("----------------------------------------------------------\n");
+    printf("GOT UDP POINTER: %d.\n", ice_ptr->port);
+    printf("----------------------------------------------------------\n");
+    //exit(0);
+  }
+#else 
+  ice_ptr->port = (uint16_t)59977;
+#endif
+
+  msg->computeMessageIntegrity(PASSWORD);
 
   ice::ICE* ice = static_cast<ice::ICE*>(user);
   ice->handleMessage(msg);
+}
+
+static void on_stun_pass_through(uint8_t* data, uint32_t nbytes, void* user) {
+  printf("STUN PASS THROUG\n");
+  dtls_parser_ptr->process(data, nbytes);
 }
 
 static void on_ice_data(uint8_t* data, uint32_t nbytes, void* user) {
   rtc::ConnectionUDP* sock = static_cast<rtc::ConnectionUDP*>(user);
   printf("Must send %u bytes back to ICE sock.\n", nbytes);
   sock->send(data, nbytes);
+}
+
+static void on_dtls_data(uint8_t* data, uint32_t nbytes, void* user) {
+  if (!udp_ptr) {
+    printf("Warning: cannot do anything with dtls data as udp_ptr isn't set.\n");
+    return;
+  }
+
+  udp_ptr->send(data, nbytes);
 }

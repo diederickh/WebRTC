@@ -43,7 +43,7 @@ namespace stun {
     HMAC_Final(&ctx, output, &len);
 
 #if 1
-    printf("\nComputing has over %u bytes:\n", nbytes);
+    printf("\nComputing hash over %u bytes:\n", nbytes);
     printf("-------------\n0: ");
     int nl = 0, lines = 0;
     for (int i = 0; i < nbytes; ++i, ++nl) {

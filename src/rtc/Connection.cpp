@@ -12,6 +12,7 @@ namespace rtc {
   
   ConnectionUDP::ConnectionUDP() 
     :loop(NULL)
+    ,saddr(NULL)
     ,user(NULL)
     ,on_data(NULL)
   {
@@ -29,7 +30,7 @@ namespace rtc {
     int r;
 
     /* create sockaddr */
-    r = uv_ip4_addr(ip.c_str(), port, &addr);
+    r = uv_ip4_addr(ip.c_str(), port, &raddr);
     if (r != 0) {
       printf("Error: cannot create sockaddr_in: %s\n", uv_strerror(r));
       return false;
@@ -43,7 +44,7 @@ namespace rtc {
     }
 
     /* bind */
-    r  = uv_udp_bind(&sock, (const struct sockaddr*)&addr, 0);
+    r  = uv_udp_bind(&sock, (const struct sockaddr*)&raddr, 0);
     if (r != 0) {
       printf("Error: cannot bind the UDP socket in ConnectionUDP: %s\n", uv_strerror(r));
       return false;
@@ -66,11 +67,29 @@ namespace rtc {
 
   void ConnectionUDP::send(uint8_t* data, uint32_t nbytes) {
 
+    if (!saddr) {
+      printf("Error: cannot send data in ConnectionUDP(); no data received yet, so we don't know where to send to.\n");
+      return;
+    }
+
     uv_udp_send_t* req = (uv_udp_send_t*)malloc(sizeof(uv_udp_send_t));
     if (!req) {
       printf("Error: cannot allocate a send request in ConnectionUDP.\n");
       return;
     }
+
+    printf("\nSENDING:\n---------");
+    int nl = 0;
+    int c = 0;
+    for(uint32_t i = 0; i < nbytes; ++i, ++nl) {
+      if (nl == 4 || c == 0) {
+        printf("\n%02D: ", c);
+        c++;
+        nl = 0;
+      }
+      printf("%02X ", data[i]);
+    }
+    printf("\n---------\n");
 
     /* @todo check nbytes size in ConnectionUDP::send */
     /* @todo we def. don't want to allocate everytime when we need to sentin ConnectionUDP. */
@@ -92,7 +111,7 @@ namespace rtc {
                         &sock, 
                         &buf, 
                         1, 
-                        (const struct sockaddr*)&addr, 
+                        (const struct sockaddr*)saddr, 
                         rtc_connection_udp_send_cb);
 
     if (r != 0) {
@@ -114,6 +133,16 @@ namespace rtc {
 
 static void rtc_connection_udp_recv_cb(uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned int flags) {
   rtc::ConnectionUDP* udp = static_cast<rtc::ConnectionUDP*>(handle->data);
+
+  if (!udp->saddr) {
+    udp->saddr = (struct sockaddr*)malloc(sizeof(struct sockaddr));
+    if (!udp->saddr) {
+      printf("Error: cannot allocate the `struct sockaddr*` in ConnectionUDP. Out of mem?\n");
+      exit(1);
+    }
+    memcpy(udp->saddr, addr, sizeof(struct sockaddr));
+  }
+
   if (udp->on_data) {
     udp->on_data((uint8_t*)buf->base, nread, udp->user);
   }
@@ -132,6 +161,7 @@ static void rtc_connection_udp_alloc_cb(uv_handle_t* handle, size_t nsize,  uv_b
 }
 
 static void rtc_connection_udp_send_cb(uv_udp_send_t* req, int status) {
+  printf("SEND: %d\n", status);
   /* @todo rtc_connection_udp_send_cb needs to handle the status value.*/
   char* ptr = (char*)req->data;
   delete[] ptr;

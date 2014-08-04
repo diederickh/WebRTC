@@ -1,11 +1,14 @@
 #include <sstream>
 #include <dtls/Context.h>
 
+static int dtls_context_ssl_verify_peer(int ok, X509_STORE_CTX* ctx) ;
+
 namespace dtls {
 
-  Context::DTLS() 
+  Context::Context() 
     :cert(NULL)
     ,pkey(NULL)
+    ,ctx(NULL)
   {
 
     if (SSL_library_init() != 1) {
@@ -14,7 +17,7 @@ namespace dtls {
 
   }
 
-  Context::~DTLS() {
+  Context::~Context() {
 
     if (cert) {
       X509_free(cert);
@@ -25,7 +28,175 @@ namespace dtls {
       EVP_PKEY_free(pkey);
       pkey = NULL;
     }
+
+    if (ctx) {
+      SSL_CTX_free(ctx);
+      ctx = NULL;
+    }
   }
+
+
+  bool Context::init() {
+
+    if (!createKeyAndCertificate()) {
+      return false;
+    }
+
+    
+    if (!createContext()) {
+      return false;
+    }
+
+    return true;
+  }
+
+  bool Context::init(std::string certfile, std::string keyfile) {
+
+    if (!loadCertificateFile(certfile)) {
+      return false;
+    }
+    
+    if (!loadPrivateKeyFile(keyfile)) {
+      return false;
+    }
+
+    if (!createContext()) {
+      return false;
+    }
+
+    return true;
+  }
+
+  SSL* Context::createSSL() {
+
+    if (!ctx) {
+      printf("Warning: cannot create SSL() because we didn't find a valid SSL_CTX.\n");
+      return NULL;
+    }
+
+    SSL* ssl = SSL_new(ctx);
+    if (!ssl) {
+      printf("Error: SSL_new() return an invalid pointer.\n");
+    }
+
+    return ssl;
+  }
+
+  bool Context::loadCertificateFile(std::string certfile) {
+
+    if (0 == certfile.size()) {
+      printf("Error: certificate file empty in dtls::Context::loadCertificateFile().\n");
+      return false;
+    }
+
+    FILE* fp = fopen(certfile.c_str(), "r");
+    if (!fp) {
+      printf("Error: cannot load the certificate file: %s\n", certfile.c_str());
+      return false;
+    }
+
+    cert = PEM_read_X509(fp, NULL, NULL, NULL);
+    if (!cert) {
+      printf("Error: cannot read X509 in dtls::Context::loadCertificateFile().\n");
+      fclose(fp);
+      return false;
+    }
+
+    fclose(fp);
+    fp = NULL;
+    return true;
+  }
+
+  bool Context::loadPrivateKeyFile(std::string keyfile) {
+
+    if (0 == keyfile.size()) {
+      printf("Error: key file empty in dtls::Context::loadPrivateKey().\n");
+      return false;
+    }
+
+    FILE* fp = fopen(keyfile.c_str(), "r");
+    if (!fp) {
+      printf("Error: cannot load the certificate file: %s\n", keyfile.c_str());
+      return false;
+    }
+    
+    pkey = PEM_read_PrivateKey(fp, NULL, NULL, NULL);
+    if(!pkey) {
+      printf("Error: cannot read the private key file: %s\n", keyfile.c_str());
+      fclose(fp);
+      fp = NULL;
+      return false;
+    }
+
+    fclose(fp);
+    fp = NULL;
+
+    return true;
+  }
+
+  bool Context::createContext() {
+
+    int r = 0;
+
+    if (!cert) {
+      printf("Error: cannot create SSL_CTX because no certificate has been set.\n");
+      return false;
+    }
+
+    if (!pkey) {
+      printf("Error: cannot create SSL_CTX because no private key has been set.\n");
+      return false;
+    }
+
+    if (ctx) {
+      printf("Error: SSL_CTX already created.\n");
+      return false;
+    }
+
+    /* create SSL object with DTLS support. */
+    ctx = SSL_CTX_new(DTLSv1_method());
+    if (!ctx) {
+      printf("Error: cannot create SSL_CTX.\n");
+      return false;
+    }
+
+    /* set our supported ciphers */
+    r = SSL_CTX_set_cipher_list(ctx, "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH");
+    if(r != 1) {
+      printf("Error: cannot set the cipher list.\n");
+      ERR_print_errors_fp(stderr);
+      return false;
+    }
+
+    /* enable srtp */
+    r = SSL_CTX_set_tlsext_use_srtp(ctx, "SRTP_AES128_CM_SHA1_80");
+    if(r != 0) {
+      printf("Error: cannot setup srtp support in dtls::Context.\n");
+      ERR_print_errors_fp(stderr);
+      return false;
+    }
+
+    /* set certificate */
+    r = SSL_CTX_use_certificate(ctx, cert);
+    if (r != 1) {
+      printf("Error: cannot set the certificate in dtls::Context.\n");
+      ERR_print_errors_fp(stderr);
+      return false;
+    }
+
+    /* set private key. */
+    r = SSL_CTX_use_PrivateKey(ctx, pkey);
+    if (r != 1) {
+      printf("Error: cannot set the private key in dtls::Context.\n");
+      ERR_print_errors_fp(stderr);
+      return false;
+    }
+
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, dtls_context_ssl_verify_peer);
+
+    return true;
+  }
+    
 
   bool Context::createKeyAndCertificate() {
 
@@ -159,4 +330,10 @@ namespace dtls {
     return true;
   }
 
-} /* namespace rtc */
+} /* namespace dtls */
+
+
+static int dtls_context_ssl_verify_peer(int ok, X509_STORE_CTX* ctx) {
+  return 1;
+}
+

@@ -19,6 +19,8 @@ namespace ice {
     void handleBindingRequest(stun::Message* msg);
 
   public:
+    std::string password; /* temp: is currently used to create a message integrity attribute and compute message integ.  */
+    uint16_t port; /* temp: the port we use when adding the xor mapped address. */
     ice_on_data_callback on_data;
     void* user;
   };

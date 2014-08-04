@@ -36,7 +36,8 @@ namespace rtc {
     void send(uint8_t* data, uint32_t nbytes);
 
   public:
-    struct sockaddr_in addr;
+    struct sockaddr_in raddr;  /* receive */
+    struct sockaddr* saddr; /* send */
     uv_udp_t sock;
     uv_loop_t* loop;
 
