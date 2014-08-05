@@ -15,6 +15,9 @@ namespace dtls {
       printf("Error: cannot initialize the SSL library.\n");
     }
 
+    SSL_load_error_strings();
+    ERR_load_BIO_strings();
+    OpenSSL_add_all_algorithms();
   }
 
   Context::~Context() {
@@ -161,12 +164,25 @@ namespace dtls {
     }
 
     /* set our supported ciphers */
-    r = SSL_CTX_set_cipher_list(ctx, "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH");
+    //r = SSL_CTX_set_cipher_list(ctx, "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH");
+    //   r = SSL_CTX_set_cipher_list(ctx, "kDHE:RSA");
+    //r = SSL_CTX_set_cipher_list(ctx, "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA");
+    //                                      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+    /*r = SSL_CTX_set_cipher_list(ctx, "ALL");*/
+    // r = SSL_CTX_set_cipher_list(ctx, "ECDHE-RSA-AES128-SHA256");
+    //r = SSL_CTX_set_cipher_list(ctx, "TLS_DHE_RSA_WITH_AES_128_CBC_SHA");
+    // r = SSL_CTX_set_cipher_list(ctx, "HIGH:MEDIUM");
+    // r = SSL_CTX_set_cipher_list(ctx, "CDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA256:ECDHE-ECDSA-AES256-SHA256:ECDHE-RSA-AES256-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA256:DHE-RSA-AES256-SHA256:AES256-GCM-SHA384:AES256-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:AES128-GCM-SHA256:AES128-SHA256:AES128-SHA:DES-CBC3-SHA");
+    r = SSL_CTX_set_cipher_list(ctx, "ALL:NULL:eNULL:aNULL");
     if(r != 1) {
       printf("Error: cannot set the cipher list.\n");
       ERR_print_errors_fp(stderr);
       return false;
     }
+
+    SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE | SSL_OP_NO_TICKET | SSL_OP_SINGLE_ECDH_USE); /* test */
+    SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF); /* test */
+    SSL_CTX_set_mode(ctx, SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_AUTO_RETRY); /* test */
 
     /* enable srtp */
     r = SSL_CTX_set_tlsext_use_srtp(ctx, "SRTP_AES128_CM_SHA1_80");
@@ -192,7 +208,12 @@ namespace dtls {
       return false;
     }
 
-    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, dtls_context_ssl_verify_peer);
+    //SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, dtls_context_ssl_verify_peer);
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, dtls_context_ssl_verify_peer); // testing: https://github.com/roxlu/krx_rtc/blob/0bc175855e10db3fd2035a1b9405999de006398c/projects/tests/src/test_udp_server.c
+    //SSL_CTX_set_session_cache_mode(k->ctx, SSL_SESS_CACHE_OFF);
+    //SSL_CTX_set_verify_depth(k->ctx, 4);
+
+
 
     return true;
   }
@@ -334,6 +355,7 @@ namespace dtls {
 
 
 static int dtls_context_ssl_verify_peer(int ok, X509_STORE_CTX* ctx) {
+  printf("DTLS_CONTEXT_SSL_VERIFY_PEER\n");
   return 1;
 }
 

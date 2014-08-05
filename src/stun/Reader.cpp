@@ -25,7 +25,7 @@ namespace stun {
   void Reader::process(uint8_t* data, uint32_t nbytes) {
 
     if (!data) {
-      printf("Error: received invalid data in Reader::process().\n");
+      printf("stun::Reader - error: received invalid data in Reader::process().\n");
       return;
     }
 
@@ -39,7 +39,7 @@ namespace stun {
         on_pass_through(data, nbytes, user);
       }
       else {
-        printf("Warning: received non-stun data (first two bits are not zero), and not on_pass_through handler set.\n");
+        printf("stun::Reader - warning: received non-stun data (first two bits are not zero), and not on_pass_through handler set.\n");
         return;
       }
     }
@@ -50,7 +50,7 @@ namespace stun {
     if (buffer.size() < 20) {
       return;
     }
-    printf("Data to process: %u bytes, %lu.\n", nbytes, buffer.size());
+    printf("stun::Reader - verbose: data to process: %u bytes, %lu.\n", nbytes, buffer.size());
 
     
     /* create the base message */
@@ -65,7 +65,17 @@ namespace stun {
 
     /* validate */
     if (!stun_validate_cookie(msg.cookie)) {
-      printf("Error: invalid STUN cookie.\n");
+      printf("stun::Reader - error: invalid STUN cookie.\n");
+#if 0      
+      if (on_pass_through) {
+        msg.buffer.clear();
+        dx = 0;
+        printf("TEST: when invalid cookie found, pass the data along.\n");
+        printf(">>>>>>>>>\n");
+        on_pass_through(data, nbytes, user);
+        printf("<<<<<<<<<<<\n");
+      }
+#endif
       return;
     }
 
@@ -84,7 +94,7 @@ namespace stun {
       attr_type = readU16();
       attr_length = readU16();
 
-      printf("Msg: %s, Type: %s, Length: %d, bytes left: %u, current index: %ld\n", 
+      printf("stun::Reader - received message type: %s, Type: %s, Length: %d, bytes left: %u, current index: %ld\n", 
              message_type_to_string(msg.type).c_str(),
              attribute_type_to_string(attr_type).c_str(), 
              attr_length, 
@@ -133,7 +143,7 @@ namespace stun {
         case STUN_ATTR_MESSAGE_INTEGRITY: {     
           MessageIntegrity* integ = new MessageIntegrity();
           memcpy(integ->sha1, &buffer[dx], 20);
-          printf("Received integrity: ");
+          printf("stun::Reader - received Message-Integrity: ");
           for (int k = 0; k < 20; ++k) {
             printf("%02X ", integ->sha1[k]);
           }
@@ -167,7 +177,7 @@ namespace stun {
         }
 
         default: {
-          printf("ERROR: unhandled STUN attribute %s of length: %u, this will result in incorrect message integrity\n", attribute_type_to_string(attr_type).c_str(), attr_length);
+          printf("stun::Reader - error: unhandled STUN attribute %s of length: %u, this will result in incorrect message integrity\n", attribute_type_to_string(attr_type).c_str(), attr_length);
           break;
         }
       }

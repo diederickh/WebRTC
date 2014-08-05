@@ -23,6 +23,7 @@ static void on_dtls_data(uint8_t* data, uint32_t nbytes, void* user);           
 rtc::ConnectionUDP* udp_ptr = NULL;
 ice::ICE* ice_ptr = NULL;
 dtls::Parser* dtls_parser_ptr = NULL;
+bool stun_done = false;
 
 int main() {
 

@@ -55,6 +55,15 @@ namespace stun {
     return find<Fingerprint>(STUN_ATTR_FINGERPRINT, result);
   }
 
+  bool Message::hasAttribute(AttributeType atype) {
+    for (size_t i = 0; i < attributes.size(); ++i) {
+      if (attributes[i]->type == atype) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   bool Message::computeMessageIntegrity(std::string key) {
 
     MessageIntegrity* integ = NULL;

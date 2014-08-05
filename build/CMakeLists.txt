@@ -34,9 +34,11 @@ set(lib_sources
   ${sd}/stun/Utils.cpp
   ${sd}/ice/ICE.cpp
   ${sd}/ice/Utils.cpp
+  ${sd}/ice/Candidate.cpp
+  ${sd}/ice/Agent.cpp
+  ${sd}/ice/Stream.cpp
   ${sd}/dtls/Context.cpp
   ${sd}/dtls/Parser.cpp
-
   ${sd}/rtc/Connection.cpp
 )
 
@@ -75,7 +77,6 @@ add_executable("${test}${debug}" ${sd}/${test}.cpp)
 target_link_libraries("${test}${debug}" ${lib} ${app_libs})
 install(TARGETS "${test}${debug}" DESTINATION bin)
 
-
 set(test test_zlib_crc32)
 add_executable("${test}${debug}" ${sd}/${test}.cpp)
 target_link_libraries("${test}${debug}" ${lib} ${app_libs})
@@ -87,6 +88,11 @@ target_link_libraries("${test}${debug}" ${lib} ${app_libs})
 install(TARGETS "${test}${debug}" DESTINATION bin)
 
 set(test test_openssl_load_key_and_cert)
+add_executable("${test}${debug}" ${sd}/${test}.cpp)
+target_link_libraries("${test}${debug}" ${lib} ${app_libs})
+install(TARGETS "${test}${debug}" DESTINATION bin)
+
+set(test test_ice_agent)
 add_executable("${test}${debug}" ${sd}/${test}.cpp)
 target_link_libraries("${test}${debug}" ${lib} ${app_libs})
 install(TARGETS "${test}${debug}" DESTINATION bin)

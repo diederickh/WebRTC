@@ -24,6 +24,7 @@ namespace stun {
     void addAttribute(Attribute* attr);                        /* Add an attribute to the message who takes ownership (will delete all attributes in the d'tor. */
     void copyTransactionID(Message* from);                     /* Copy the transaction ID from the given messsage. */
     void setTransactionID(uint32_t a, uint32_t b, uint32_t c); /* Set the transaction ID from the given values. */
+    bool hasAttribute(AttributeType atype);                    /* Check if the given attribute is found in one of the attributes */
     bool find(MessageIntegrity** result);                      /* Find a message integrity attribute. */
     bool find(XorMappedAddress** result);                      /* Find a xor-mapped-address attribute.*/
     bool find(Fingerprint** result);                           /* Find a fingerprint attrbiute. */

@@ -44,7 +44,7 @@ namespace stun {
   public:
     Reader();
     void process(uint8_t* data, uint32_t nbytes);
-    std::string password;
+    std::string password; /* TEMP: @todo stun::Reader(), password is temporary and should be remove at some point.*/
 
   private:
     uint8_t readU8();

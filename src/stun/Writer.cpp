@@ -16,11 +16,8 @@ namespace stun {
     found it will calcualte the CRC32 and put it into Writer::buffer.
    */
   void Writer::writeMessage(Message* msg, std::string messageIntegrityPassword) {
-    /*
-      the msg->computeMessageIntegrity is calculated 'over' the buffer of the Message 
-       object; not our internal buffer! We need to write into the buffer of the message. 
-    */ 
-    printf("We need to fix the stun::Writer // computeMessageIntegrity + computeFingerprint.\n");
+
+    printf("stun::Writer - verbose: creating stun message with integrity password: `%s`\n", messageIntegrityPassword.c_str());
 
     /* first write all the attributes. */
     writeMessage(msg);
@@ -35,7 +32,7 @@ namespace stun {
         }
       }
       else {
-        printf("Warning: couldn't write the message integrity value in stun::Writer.\n");
+        printf("stun::Writer - warning: couldn't write the message integrity value in stun::Writer.\n");
       }
     }
     
@@ -47,7 +44,7 @@ namespace stun {
         rewriteU32(fp->offset + 4, crc);
       }
       else {
-        printf("Warning: couldn't write the message fingerprint in stun::Writer.\n");
+        printf("stun::Writer - warning: couldn't write the message fingerprint in stun::Writer.\n");
       }
     }
   }
@@ -93,7 +90,7 @@ namespace stun {
 
     /* rewrite the message size header element; is the size w/o the header. */
     if (buffer.size() > UINT16_MAX) {
-      printf("Warning: message size is too large.\n");
+      printf("stun::Writer - warning: message size is too large.\n");
       return;
     }
 
@@ -146,7 +143,7 @@ namespace stun {
       }
 
       default: {
-        printf("Error: unhandled attribute in stun::Writer::writeAttribute(): %s\n", attribute_type_to_string(attr->type).c_str());
+        printf("stun::Writer - error: unhandled attribute in stun::Writer::writeAttribute(): %s\n", attribute_type_to_string(attr->type).c_str());
         break;
       }
     }
@@ -269,7 +266,7 @@ namespace stun {
   void Writer::rewriteU16(size_t dx, uint16_t v) {
 
     if ( (dx + 2) > buffer.size()) {
-      printf("Warning: trying to rewriteU16, but our buffer is too small to contain a u16.\n");
+      printf("stun::Writer - warning: trying to rewriteU16, but our buffer is too small to contain a u16.\n");
       return;
     }
 
@@ -280,7 +277,7 @@ namespace stun {
 
   void Writer::rewriteU32(size_t dx, uint32_t v) {
     if ( (dx + 4) > buffer.size()) {
-      printf("Warning: trying to rewrite U32 in stun::Writer::rewriteU32() but index is out of bounds.\n");
+      printf("stun::Writer - warning: trying to rewrite U32 in stun::Writer::rewriteU32() but index is out of bounds.\n");
       return;
     }
 
