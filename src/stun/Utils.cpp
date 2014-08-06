@@ -43,7 +43,7 @@ namespace stun {
     HMAC_Final(&ctx, output, &len);
 
 #if 1
-    printf("stun::compute_hmac_sha1 - verbose: computing hash over %u bytes:\n", nbytes);
+    printf("stun::compute_hmac_sha1 - verbose: computing hash over %u bytes, using key `%s`:\n", nbytes, key.c_str());
     printf("-----------------------------------\n\t0: ");
     int nl = 0, lines = 0;
     for (int i = 0; i < nbytes; ++i, ++nl) {

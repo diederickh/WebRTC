@@ -32,8 +32,8 @@ namespace ice {
     /* set the parser.ssl for each of the stream candidates, @todo there must be a better API for this. */
     for(size_t i = 0; i < streams.size(); ++i) {
       Stream* stream = streams[i];
-      for(size_t k = 0; k < stream->candidates.size(); ++k) {
-        Candidate* cand = stream->candidates[k];
+      for(size_t k = 0; k < stream->local_candidates.size(); ++k) {
+        Candidate* cand = stream->local_candidates[k];
         cand->dtls.ssl = dtls_ctx.createSSL();
         if (!cand->dtls.ssl) {
           printf("ice::Agent - error: cannot create the SSL* for the candidate.\n");

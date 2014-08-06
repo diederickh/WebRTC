@@ -157,7 +157,7 @@ namespace dtls {
     }
 
     /* create SSL object with DTLS support. */
-    ctx = SSL_CTX_new(DTLSv1_method());
+    ctx = SSL_CTX_new(DTLSv1_server_method());
     if (!ctx) {
       printf("Error: cannot create SSL_CTX.\n");
       return false;
@@ -208,12 +208,12 @@ namespace dtls {
       return false;
     }
 
-    //SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, dtls_context_ssl_verify_peer);
-    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, dtls_context_ssl_verify_peer); // testing: https://github.com/roxlu/krx_rtc/blob/0bc175855e10db3fd2035a1b9405999de006398c/projects/tests/src/test_udp_server.c
+    //SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, dtls_context_ssl_verify_peer);
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, dtls_context_ssl_verify_peer);
+    //SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, dtls_context_ssl_verify_peer); // testing: https://github.com/roxlu/krx_rtc/blob/0bc175855e10db3fd2035a1b9405999de006398c/projects/tests/src/test_udp_server.c
+    // SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, dtls_context_ssl_verify_peer);
     //SSL_CTX_set_session_cache_mode(k->ctx, SSL_SESS_CACHE_OFF);
     //SSL_CTX_set_verify_depth(k->ctx, 4);
-
-
 
     return true;
   }

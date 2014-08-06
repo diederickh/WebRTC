@@ -6,6 +6,7 @@
 #include <rtc/Connection.h>
 #include <stun/Reader.h>
 #include <dtls/Parser.h>
+#include <dtls/Context.h>
 
 namespace ice {
 
@@ -22,7 +23,7 @@ namespace ice {
   class Candidate {
   public:
     Candidate(std::string ip, uint16_t port);
-    bool init();
+    bool init(connection_on_data_callback cb, void* user);            /* pass in the function which will receive the data from the socket. */
     void update();                                                    /* read data from the socket + process */
     void setCredentials(std::string ufrag, std::string pwd);          /* set the ice-ufrag and ice-pwd values. */
 
@@ -37,6 +38,21 @@ namespace ice {
     dtls::Parser dtls;                                                /* used to handle the dtls handshake */
   };
 
+  class CandidatePair {
+  public:
+    CandidatePair();
+    CandidatePair(Candidate* local, Candidate* remote);
+    ~CandidatePair();
+    void process(uint8_t* data, uint32_t nbytes);
+
+  public:
+    Candidate* local;
+    Candidate* remote;
+    stun::Reader stun;
+    dtls::Parser dtls;
+    dtls::Context dtls_ctx; /* @todo dtls_ctx is temporary - only used to test with different data streams per candidatepair */
+  };
 
 } /* namespace ice */
+
 #endif

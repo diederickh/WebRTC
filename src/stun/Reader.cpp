@@ -3,7 +3,6 @@
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
 
-
 namespace stun {
 
   /* --------------------------------------------------------------------- */
@@ -34,16 +33,21 @@ namespace stun {
     }
 
     /* handle non-stun data (e.g. DTLS) */
-    if ( (data[0] & 0x03) != 0x00) {
+    //if ( (data[0] & 0xC0) != 0x00) {
+    if ( (data[0] & 0xC0) != 0x00) {
       if (on_pass_through) {
         on_pass_through(data, nbytes, user);
       }
       else {
         printf("stun::Reader - warning: received non-stun data (first two bits are not zero), and not on_pass_through handler set.\n");
-        return;
       }
+      return;
     }
-
+    
+    /* resetting the buffer - @todo - at the bottom of this function we erase all read bytes which isn't 100% necessary as we process a full packet a time */
+    dx = 0;
+    buffer.clear();
+    
     std::copy(data, data + nbytes, std::back_inserter(buffer));
     
     /* A stun message must at least contain 20 bytes. */
@@ -61,12 +65,15 @@ namespace stun {
     msg.transaction[0] = readU32();
     msg.transaction[1] = readU32();
     msg.transaction[2] = readU32();
+
     std::copy(data, data + nbytes, std::back_inserter(msg.buffer));
+
 
     /* validate */
     if (!stun_validate_cookie(msg.cookie)) {
-      printf("stun::Reader - error: invalid STUN cookie.\n");
-#if 0      
+      printf("stun::Reader - error: invalid STUN cookie, number of bytes: %u\n", nbytes);
+      printf("stun::Reader - invalid cookie data: %02X %02X %02X %02X\n", data[0], data[1], data[2], data[3]);
+#if 1      
       if (on_pass_through) {
         msg.buffer.clear();
         dx = 0;
@@ -203,7 +210,9 @@ namespace stun {
     }
 
     /* and erase any read data. */
+    /* @todo - we could use buffer.clear() here ... */
     buffer.erase(buffer.begin(), buffer.begin() + dx);
+    
     dx = 0;
 
     if (on_message) {

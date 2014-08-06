@@ -9,7 +9,9 @@ fi
 cd build.release
 cmake -DCMAKE_BUILD_TYPE=Release ../ 
 cmake --build . --target install
+
 cd ./../../install/mac-clang-x86_64/bin/
+
 #./test_ice
 #./test_ssl_fingerprint
 #./test_zlib_crc32
@@ -18,3 +20,4 @@ cd ./../../install/mac-clang-x86_64/bin/
 #./test_stun_message_fingerprint
 #./test_openssl_load_key_and_cert
 ./test_ice_agent
+#./test_libwebsockets

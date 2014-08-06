@@ -14,7 +14,7 @@
 
 #define PASSWORD "Q9wQj99nsQzldVI5ZuGXbEWRK5RhRXdC"  /* our ice-pwd value */
 
-static void on_udp_data(uint8_t* data, uint32_t nbytes, void* user);             /* gets called when we recieve data on our 'candidate' */
+static void on_udp_data(std::string rip, uint16_t rport, std::string lip, uint16_t lport, uint8_t* data, uint32_t nbytes, void* user);             /* gets called when we recieve data on our 'candidate' */
 static void on_stun_message(stun::Message* msg, void* user);                     /* gets called when we receive a stun message */
 static void on_stun_pass_through(uint8_t* data, uint32_t nbytes, void* user);    /* gets called when we received some data which isn't a stun message, e.g. DTLS handshake. */
 static void on_ice_data(uint8_t* data, uint32_t nbytes, void* user);             /* gets called when we need to send ICE related data */
@@ -149,7 +149,10 @@ int main() {
   return 0;
 }
 
-static void on_udp_data(uint8_t* data, uint32_t nbytes, void* user) {
+static void on_udp_data(std::string rip, uint16_t rport, 
+                        std::string lip, uint16_t lport, 
+                        uint8_t* data, uint32_t nbytes, void* user) 
+{
   stun::Reader* stun = static_cast<stun::Reader*>(user);
   stun->process(data, nbytes);
 }

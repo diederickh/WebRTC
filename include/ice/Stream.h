@@ -16,12 +16,19 @@ namespace ice {
     ~Stream();
     bool init();
     void update();
-    void addCandidate(Candidate* c);                               /* add a candidate; we take ownership of the candidate and free it in the d'tor. */
+    void addLocalCandidate(Candidate* c);                          /* add a candidate; we take ownership of the candidate and free it in the d'tor. */
+    void addRemoteCandidate(Candidate* c);                         /* add a remote candidate; is done whenever we recieve data from a ip:port for which no CandidatePair exists. */ 
+    void addCandidatePair(CandidatePair* p);
     void setCredentials(std::string ufrag, std::string pwd);       /* set the credentials (ice-ufrag, ice-pwd) for all candidates. */
+    CandidatePair* findPair(std::string lip, uint16_t lport, std::string rip, uint16_t rport);
+    Candidate* findLocalCandidate(std::string ip, uint16_t port);
+    Candidate* findRemoteCandidate(std::string ip, uint16_t port);
 
   public:
     StreamState state;
-    std::vector<Candidate*> candidates;
+    std::vector<Candidate*> local_candidates;                      /* our candidates */
+    std::vector<Candidate*> remote_candidates;
+    std::vector<CandidatePair*> pairs;                             /* the candidate pairs */
   }; 
 
 } /* namespace ice */

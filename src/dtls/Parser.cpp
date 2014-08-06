@@ -69,20 +69,24 @@ namespace dtls {
       BIO_set_mem_eof_return(out_bio, -1); /* see: https://www.openssl.org/docs/crypto/BIO_s_mem.html */
     }
 
+    /* set info callback */
+    SSL_set_info_callback(ssl, dtls_parse_ssl_info_callback);
+
     /* set in and output bios. */
     SSL_set_bio(ssl, in_bio, out_bio);
 
     SSL_set_accept_state(ssl); /* in case we're a server */
     //SSL_set_connect_state(ssl); /* in case we're a client */
-
-    /* set info callback */
-    SSL_set_info_callback(ssl, dtls_parse_ssl_info_callback);
-    
     
     return true;
   }
 
   void Parser::process(uint8_t* data, uint32_t nbytes) {
+
+    if (!in_bio) {
+      printf("dtls::Parser - error: in_bio is invalid, not initialized?\n");
+      return;
+    }
 
     if (!data) {
       printf("Warning: calling Parser::process w/o valid data.\n");
@@ -118,7 +122,6 @@ namespace dtls {
     if (pending <= 0) {
       return;
     }
-    
 
     while(pending) {
 
@@ -143,7 +146,7 @@ namespace dtls {
       pending -= to_read;
     }
     
-    printf("Pending in out bio: %d\n", pending);
+    printf("Pending in out_bio: %d\n", pending);
   }
 
 } /* namespace dtls */

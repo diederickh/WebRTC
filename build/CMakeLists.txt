@@ -51,6 +51,8 @@ set(app_libs
   ${extern_lib_dir}/libcrypto.a          # for hmac/sha/ssl
   ${extern_lib_dir}/libuv.a              # for networking
   ${extern_lib_dir}/libz.a               # for crc32
+  ${extern_lib_dir}/libjansson.a         # for signaling, parsing json messages
+  ${extern_lib_dir}/libwebsockets.a      # for signaling, handling i/o
 )
 
 add_library(${lib} STATIC ${lib_sources})
@@ -94,5 +96,16 @@ install(TARGETS "${test}${debug}" DESTINATION bin)
 
 set(test test_ice_agent)
 add_executable("${test}${debug}" ${sd}/${test}.cpp)
+target_link_libraries("${test}${debug}" ${lib} ${app_libs})
+install(TARGETS "${test}${debug}" DESTINATION bin)
+
+set(test test_libwebsockets)
+add_executable("${test}${debug}" ${sd}/${test}.cpp)
+set_target_properties("${test}${debug}" PROPERTIES COMPILE_FLAGS "-std=c++0x")
+target_link_libraries("${test}${debug}" ${lib} ${app_libs})
+install(TARGETS "${test}${debug}" DESTINATION bin)
+
+set(test test_dtls)
+add_executable("${test}${debug}" ${sd}/${test}.c)
 target_link_libraries("${test}${debug}" ${lib} ${app_libs})
 install(TARGETS "${test}${debug}" DESTINATION bin)
