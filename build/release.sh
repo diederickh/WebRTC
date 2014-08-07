@@ -20,4 +20,5 @@ cd ./../../install/mac-clang-x86_64/bin/
 #./test_stun_message_fingerprint
 #./test_openssl_load_key_and_cert
 #./test_libwebsockets
-./test_ice_agent
+#./test_ice_agent
+./test_extract_keying_info_for_srtp

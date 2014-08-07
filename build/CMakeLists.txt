@@ -108,3 +108,8 @@ set(test test_dtls)
 add_executable("${test}${debug}" ${sd}/${test}.c)
 target_link_libraries("${test}${debug}" ${lib} ${app_libs})
 install(TARGETS "${test}${debug}" DESTINATION bin)
+
+set(test test_extract_keying_info_for_srtp)
+add_executable("${test}${debug}" ${sd}/${test}.cpp)
+target_link_libraries("${test}${debug}" ${lib} ${app_libs})
+install(TARGETS "${test}${debug}" DESTINATION bin)
