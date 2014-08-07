@@ -13,9 +13,6 @@ namespace stun {
 
   Reader::Reader() 
     :dx(0)
-     //    ,on_message(NULL)
-     //    ,on_pass_through(NULL)
-     //    ,user(NULL)
   {
   }
 
@@ -27,19 +24,14 @@ namespace stun {
       printf("stun::Reader - error: received invalid data in Reader::process().\n");
       return -1;
     }
+    if (!msg) {
+      printf("stun::Reader - error: invalid stun::Message passed into Reader::process().\n");
+      return -1;
+    }
 
     /* handle non-stun data (e.g. DTLS) */
-    //if ( (data[0] & 0xC0) != 0x00) {
     if ( (data[0] & 0xC0) != 0x00) {
       return 1;
-      //      if (on_pass_through) {
-        //on_pass_through(data, nbytes, user);
-        printf("@todo - stun::Reader::process -> create replacement for on_pass_through.\n");
-        /* @todo - stun::Reader::process(), needs to make sure 'pass_through' is called, or the return value should indicate this! */
-        //      }
-        //      else {
-        printf("stun::Reader - warning: received non-stun data (first two bits are not zero), and not on_pass_through handler set.\n");
-        //      }
     }
     
     /* resetting the buffer - @todo - at the bottom of this function we erase all read bytes which isn't 100% necessary as we process a full packet a time */
@@ -52,11 +44,10 @@ namespace stun {
     if (buffer.size() < 20) {
       return 1;
     }
-    printf("stun::Reader - verbose: data to process: %u bytes, %lu.\n", nbytes, buffer.size());
 
+    printf("stun::Reader - verbose: data to process: %u bytes, %lu.\n", nbytes, buffer.size());
     
     /* create the base message */
-    //Message msg;
     msg->type = readU16();
     msg->length = readU16();
     msg->cookie = readU32();
@@ -64,27 +55,17 @@ namespace stun {
     msg->transaction[1] = readU32();
     msg->transaction[2] = readU32();
 
-    std::copy(data, data + nbytes, std::back_inserter(msg->buffer));
-
-
     /* validate */
     if (!stun_validate_cookie(msg->cookie)) {
-      printf("stun::Reader - error: invalid STUN cookie, number of bytes: %u\n", nbytes);
-      printf("stun::Reader - invalid cookie data: %02X %02X %02X %02X\n", data[0], data[1], data[2], data[3]);
-#if 1      
-      //      if (on_pass_through) {
-
-        msg->buffer.clear();
-        dx = 0;
-        printf("TEST: when invalid cookie found, pass the data along.\n");
-        printf(">>>>>>>>>\n");
-        printf("@todo - stun::Reader::process -> create replacement for on_pass_through.\n");
-        //on_pass_through(data, nbytes, user);
-        printf("<<<<<<<<<<<\n");
-
-#endif
-        return 1;
+      printf("stun::Reader - warning: invalid STUN cookie, number of bytes: %u\n", nbytes);
+      printf("stun::Reader - warning: invalid cookie data: %02X %02X %02X %02X\n", data[0], data[1], data[2], data[3]);
+      msg->buffer.clear();
+      dx = 0;
+      return 1;
     }
+
+    /* copy the data into the message, @todo - is this used anywhere; and do we need it? */
+    std::copy(data, data + nbytes, std::back_inserter(msg->buffer));
 
     /* parse the rest of the message */
     int c = 0;
@@ -155,7 +136,6 @@ namespace stun {
             printf("%02X ", integ->sha1[k]);
           }
           printf("\n");
-          //integ->offset = dx - 4;
           attr = (Attribute*) integ;
           skip(20);
           break;
@@ -215,11 +195,6 @@ namespace stun {
     
     dx = 0;
 
-    printf("stun::Reader::process(), on_message is removed, create fix.\n");
-    //    if (on_message) {
-      /* deprecated */
-      //     on_message(&msg, user);
-    //}
     return 0;
   }
 

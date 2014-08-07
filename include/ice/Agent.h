@@ -41,20 +41,19 @@ namespace ice {
   public:
     Agent();
     ~Agent();
-    bool init();                                                /* After adding streams (and candidates to streams), call init to kick off everythign */
-    void update();                                              /* This must be called often as it fetches new data from the socket and parses any incoming data */
-    void addStream(Stream* stream);                             /* Add a new stream, this class takes ownership */
-    void setCredentials(std::string ufrag, std::string pwd);    /* set the credentials (ice-ufrag, ice-pwd) for all streams. */
-    //void addCandidate(uint32_t streamid, Candidate* cand);    /* Add a candidate for a stream, we take ownership of the given candidate. */
+    bool init();                                                                           /* After adding streams (and candidates to streams), call init to kick off everythign */
+    void update();                                                                         /* This must be called often as it fetches new data from the socket and parses any incoming data */
+    void addStream(Stream* stream);                                                        /* Add a new stream, this class takes ownership */
+    void setCredentials(std::string ufrag, std::string pwd);                               /* set the credentials (ice-ufrag, ice-pwd) for all streams. */
 
     /* ICE */
-    void handleStunMessage(Stream* stream, CandidatePair* pair, stun::Message* msg); /* Handles incoming stun messages for the given stream and candidates. It will make sure the correct action will be taken. */
+    void handleStunMessage(Stream* stream, CandidatePair* pair, stun::Message* msg);       /* Handles incoming stun messages for the given stream and candidates. It will make sure the correct action will be taken. */
 
   public:
-    std::vector<Stream*> streams;
-    dtls::Context dtls_ctx;                                     /* The dtls::Context is used to handle the dtls communication */
-    stun::Reader stun;
-    bool is_lite;                                               /* At this moment we only support ice-lite. */
+    std::vector<Stream*> streams;         
+    dtls::Context dtls_ctx;                                                                /* The dtls::Context is used to handle the dtls communication */
+    stun::Reader stun;                                                                     /* Used to parse incoming data and detect stun messages */
+    bool is_lite;                                                                          /* At this moment we only support ice-lite. */
 
   };
 } /* namespace ice */

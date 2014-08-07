@@ -12,7 +12,7 @@ namespace rtc {
   
   ConnectionUDP::ConnectionUDP() 
     :loop(NULL)
-    ,saddr(NULL)
+     //    ,saddr(NULL)
     ,user(NULL)
     ,on_data(NULL)
     ,port(0)
@@ -68,6 +68,7 @@ namespace rtc {
     return true;
   }
 
+#if 0
   void ConnectionUDP::send(uint8_t* data, uint32_t nbytes) {
 
     if (!saddr) {
@@ -94,7 +95,6 @@ namespace rtc {
       printf("%02X ", data[i]);
     }
     printf("\n-----------------------------------\n");
-
 
     /* @todo check nbytes size in ConnectionUDP::send */
     /* @todo we def. don't want to allocate everytime when we need to sentin ConnectionUDP. */
@@ -127,6 +127,7 @@ namespace rtc {
       buffer_copy = NULL;
     }
   }
+#endif
 
   void ConnectionUDP::sendTo(std::string rip, uint16_t rport, uint8_t* data, uint32_t nbytes) {
     uv_udp_send_t* req = (uv_udp_send_t*)malloc(sizeof(uv_udp_send_t));
@@ -201,7 +202,7 @@ static void rtc_connection_udp_recv_cb(uv_udp_t* handle, ssize_t nread, const uv
   }
 
   rtc::ConnectionUDP* udp = static_cast<rtc::ConnectionUDP*>(handle->data);
-
+  /*
   if (!udp->saddr) {
     udp->saddr = (struct sockaddr*)malloc(sizeof(struct sockaddr));
     if (!udp->saddr) {
@@ -210,6 +211,7 @@ static void rtc_connection_udp_recv_cb(uv_udp_t* handle, ssize_t nread, const uv
     }
     memcpy(udp->saddr, addr, sizeof(struct sockaddr));
   }
+  */
 
   if (addr) {
     char src_ip[20];

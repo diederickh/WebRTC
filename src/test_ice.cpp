@@ -1,10 +1,18 @@
+/*
+  test_ice
+  ---------
+  
+  This is used during development of the library; it contains ugly snippets of 
+  code to try/experiment with the different parts of libwebrtc. This is not 
+  meant to be used by end-users of the library. This is also not a unit test.
+
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <fstream>
 #include <dtls/Context.h>
 #include <dtls/Parser.h>
 #include <rtc/Connection.h>
-#include <ice/ICE.h>
 #include <stun/Reader.h>
 #include <ice/Utils.h>
 #include <sdp/Types.h>
@@ -15,13 +23,9 @@
 #define PASSWORD "Q9wQj99nsQzldVI5ZuGXbEWRK5RhRXdC"  /* our ice-pwd value */
 
 static void on_udp_data(std::string rip, uint16_t rport, std::string lip, uint16_t lport, uint8_t* data, uint32_t nbytes, void* user);             /* gets called when we recieve data on our 'candidate' */
-static void on_stun_message(stun::Message* msg, void* user);                     /* gets called when we receive a stun message */
-static void on_stun_pass_through(uint8_t* data, uint32_t nbytes, void* user);    /* gets called when we received some data which isn't a stun message, e.g. DTLS handshake. */
-static void on_ice_data(uint8_t* data, uint32_t nbytes, void* user);             /* gets called when we need to send ICE related data */
 static void on_dtls_data(uint8_t* data, uint32_t nbytes, void* user);            /* gets called when we need to send DTLS related data */ 
 
 rtc::ConnectionUDP* udp_ptr = NULL;
-ice::ICE* ice_ptr = NULL;
 dtls::Parser* dtls_parser_ptr = NULL;
 bool stun_done = false;
 
@@ -43,7 +47,6 @@ int main() {
   }
 
   /* parse the input */
-  ice::ICE ice;
   dtls::Context dtls_ctx; 
   dtls::Parser dtls_parser;
   rtc::ConnectionUDP sock;
@@ -60,7 +63,6 @@ int main() {
   std::string fingerprint;
 
   udp_ptr = &sock;
-  ice_ptr = &ice;
   dtls_parser_ptr = &dtls_parser;
 
   if (reader.parse(input_sdp, &offer) < 0) {
@@ -89,7 +91,6 @@ int main() {
     ice_pwd = ice::gen_random_string(32);
     
     if (offer.find(sdp::SDP_VIDEO, &video)) {
-      printf("- found video. %p\n", video);
       video->remove(sdp::SDP_ATTR_CANDIDATE);
       video->remove(sdp::SDP_ATTR_ICE_UFRAG);
       video->remove(sdp::SDP_ATTR_ICE_PWD);
@@ -104,7 +105,6 @@ int main() {
     }
 
     if (offer.find(sdp::SDP_AUDIO, &audio)) {
-      printf("- found audio. %p\n", audio);
       audio->remove(sdp::SDP_ATTR_CANDIDATE);
       audio->remove(sdp::SDP_ATTR_ICE_UFRAG);
       audio->remove(sdp::SDP_ATTR_ICE_PWD);
@@ -131,14 +131,7 @@ int main() {
 
   sock.on_data = on_udp_data;
   sock.user = (void*)&stun;
-  //  stun.on_message = on_stun_message;
-  //  stun.on_pass_through = on_stun_pass_through;
-  //  stun.user = (void*)&ice;
-  /* @todo -> stun::Reader(), doesnt need it's own password; it's stored per Candidate/pair. */
-  //  stun.password = ice_pwd;
-  ice.on_data = on_ice_data;
-  ice.user = (void*)&sock;
-  ice.password = PASSWORD;
+
   dtls_parser.on_data = on_dtls_data;
   dtls_parser.user = (void*)&dtls_parser;
 
@@ -146,7 +139,6 @@ int main() {
   while (true) {
     sock.update();
   }
-
   return 0;
 }
 
@@ -156,54 +148,24 @@ static void on_udp_data(std::string rip, uint16_t rport,
 {
   stun::Message msg;
   stun::Reader* stun = static_cast<stun::Reader*>(user);
-  stun->process(data, nbytes, &msg);
-}
+  int r = stun->process(data, nbytes, &msg);
 
-static void on_stun_message(stun::Message* msg, void* user) {
-
-  /* Test: Set the port for the xor-mapped-address response, so the 
-           browser will start listening on this port; 
-  */
-#if 0     
-  if (ice_ptr && udp_ptr && udp_ptr->saddr) {
-    if (udp_ptr->saddr->sa_family != AF_INET) {
-      printf("Invalid sockaddr struct.\n");
-      exit(1);
-    }
-
-    ice_ptr->port = ntohs(((struct sockaddr_in*)udp_ptr->saddr)->sin_port);
-    
-    printf("----------------------------------------------------------\n");
-    printf("GOT UDP POINTER: %d.\n", ice_ptr->port);
-    printf("----------------------------------------------------------\n");
-    //exit(0);
+  if (r == 0) {
+    /* valid stun message */
+    msg.computeMessageIntegrity(PASSWORD);
   }
-#else 
-  ice_ptr->port = (uint16_t)59977;
-#endif
-
-  msg->computeMessageIntegrity(PASSWORD);
-
-  ice::ICE* ice = static_cast<ice::ICE*>(user);
-  ice->handleMessage(msg);
-}
-
-static void on_stun_pass_through(uint8_t* data, uint32_t nbytes, void* user) {
-  printf("STUN PASS THROUG\n");
-  dtls_parser_ptr->process(data, nbytes);
-}
-
-static void on_ice_data(uint8_t* data, uint32_t nbytes, void* user) {
-  rtc::ConnectionUDP* sock = static_cast<rtc::ConnectionUDP*>(user);
-  printf("Must send %u bytes back to ICE sock.\n", nbytes);
-  sock->send(data, nbytes);
+  else if (r == 1) {
+    /* other data, e.g. DTLS ClientHello or SRTP data */   
+    if (dtls_parser_ptr) {
+      dtls_parser_ptr->process(data, nbytes);
+    }
+  }
+  else {
+    printf("Error: unhandled stun::Reader::process() result.\n");
+    exit(1);
+  }
 }
 
 static void on_dtls_data(uint8_t* data, uint32_t nbytes, void* user) {
-  if (!udp_ptr) {
-    printf("Warning: cannot do anything with dtls data as udp_ptr isn't set.\n");
-    return;
-  }
-
-  udp_ptr->send(data, nbytes);
+  /* handle dtls data, e.g. send back to sock. */
 }

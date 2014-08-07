@@ -20,6 +20,8 @@ namespace ice {
     CANDIDATE_STATE_FROZEN
   };
 
+  /* -------------------------------------------------- */
+
   class Candidate {
   public:
     Candidate(std::string ip, uint16_t port);
@@ -28,29 +30,31 @@ namespace ice {
     void setCredentials(std::string ufrag, std::string pwd);          /* set the ice-ufrag and ice-pwd values. */
 
   public:
-    std::string ip;
-    uint16_t port;
+    CandidateState state;                                             /* candidate state; used by ice */
+    std::string ip;                                                   /* the ip to which we can send data */ 
+    uint16_t port;                                                    /* the port to which we can send data */
     std::string ice_ufrag;                                            /* ice-ufrag value */
-    std::string ice_pwd;                                              /* ice-pwd value */ 
-    CandidateState state;                                             
+    std::string ice_pwd;                                              /* ice-pwd value, used to construct message-integrity attributes */ 
     rtc::ConnectionUDP conn;                                          /* the (udp for now) connection on which we receive data; later we can decouple this if necessary. */
     stun::Reader stun;                                                /* the stun reader; used to parse incoming stun messages */
     dtls::Parser dtls;                                                /* used to handle the dtls handshake */
-    connection_on_data_callback on_data;
-    void* user;
+    connection_on_data_callback on_data;                              /* will be called whenever we receive data from the socket. */
+    void* user;                                                       /* user data */
   };
+
+
+  /* -------------------------------------------------- */
 
   class CandidatePair {
   public:
     CandidatePair();
     CandidatePair(Candidate* local, Candidate* remote);
     ~CandidatePair();
-//    void process(uint8_t* data, uint32_t nbytes);
 
   public:
-    Candidate* local;
-    Candidate* remote;
-    dtls::Parser dtls;
+    Candidate* local;                                                 /* local candidate; which has a socket (ConnectionUDP) */
+    Candidate* remote;                                                /* the remote party from which we receive data and send data towards. */
+    dtls::Parser dtls;                                                /* each candidate pair has it's own dtls context; each pair has it's own 'flow' of data */
   };
 
 } /* namespace ice */

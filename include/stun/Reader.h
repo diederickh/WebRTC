@@ -29,38 +29,24 @@
 
 namespace stun {
 
-  /* --------------------------------------------------------------------- */
-
-  class Attribute;
-  class Message;
-
-  typedef void(*stun_on_message_callback)(Message* msg, void* user);                        /* is called when we successfully parse a stun messge. */
-  typedef void(*stun_on_pass_through)(uint8_t* data, uint32_t nbytes, void* user);          /* is called when the data given to the reader is not a stun message */
-
-  /* --------------------------------------------------------------------- */
-
   class Reader {
 
   public:
     Reader();
-    int process(uint8_t* data, uint32_t nbytes, Message* msg);
-    //    std::string password; /* TEMP: @todo stun::Reader(), password is temporary and should be remove at some point.*/
+    int process(uint8_t* data, uint32_t nbytes, Message* msg);  /* parses the incoming data and fills msg if the data contains a valid stun message, if so it returns 0, when other data is passed into this function it will return 1, on error it returns -1 */
 
   private:
-    uint8_t readU8();
-    uint16_t readU16();                   /* read an uint16_t from the buffer, expecting the buffer to hold Big Endian data and moving the dx member. */
-    uint32_t readU32();                   /* read an uint32_t from the buffer, expecting the buffer to hold Big Endian data and moving the dx member. */
-    uint64_t readU64();                   /* read an uint64_t from the buffer, expecting the buffer to hold Big Endian data and moving the dx member. */
-    StringValue readString(uint16_t len); /* read a StringValue from the current buffer */
-    XorMappedAddress* readXorMappedAddress();
-    void skip(uint32_t nbytes);           /* skip the next nbytes. */    
-    uint32_t bytesLeft();                 /* returns the number of bytes that still need to be parsed, this is not the same as the size of the buffer! */
-    uint8_t* ptr();                       /* returns a pointer to the current read index of the buffer. */
+    uint8_t readU8();                                           /* read one uint8_t from buffer and increment the index. */
+    uint16_t readU16();                                         /* read an uint16_t from the buffer, expecting the buffer to hold Big Endian data and moving the dx member. */
+    uint32_t readU32();                                         /* read an uint32_t from the buffer, expecting the buffer to hold Big Endian data and moving the dx member. */
+    uint64_t readU64();                                         /* read an uint64_t from the buffer, expecting the buffer to hold Big Endian data and moving the dx member. */
+    StringValue readString(uint16_t len);                       /* read a StringValue from the current buffer */
+    XorMappedAddress* readXorMappedAddress();                   /* reads a XorMappedAddress */
+    void skip(uint32_t nbytes);                                 /* skip the next nbytes. */    
+    uint32_t bytesLeft();                                       /* returns the number of bytes that still need to be parsed, this is not the same as the size of the buffer! */
+    uint8_t* ptr();                                             /* returns a pointer to the current read index of the buffer. */
     
   public:
-    //    stun_on_message_callback on_message;
-    //    stun_on_pass_through on_pass_through;
-    //   void* user;
     std::vector<uint8_t> buffer;
     size_t dx;
   };

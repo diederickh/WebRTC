@@ -20,7 +20,7 @@ extern "C" {
 #include <stdint.h>
 #include <string>
 
-typedef void(*connection_on_data_callback)(std::string rip, uint16_t rport,            /* local ip and port */
+typedef void(*connection_on_data_callback)(std::string rip, uint16_t rport,              /* local ip and port */
                                            std::string lip, uint16_t lport,              /* remote ip and port */
                                            uint8_t* data, uint32_t nbytes, void* user);  /* gets called when a connection receives some data. */
 
@@ -35,13 +35,13 @@ namespace rtc {
     ConnectionUDP();
     bool bind(std::string ip, uint16_t port);
     void update();
-    void send(uint8_t* data, uint32_t nbytes); /* @todo - deprecated, use sendTo */
+    //    void send(uint8_t* data, uint32_t nbytes); /* @todo - deprecated, use sendTo */
     void sendTo(std::string rip, uint16_t rport, uint8_t* data, uint32_t nbytes);
   public:
     std::string ip;
     uint16_t port;
     struct sockaddr_in raddr;  /* receive */
-    struct sockaddr* saddr; /* send (will not be necessary anymore! @todo remove when ice things are working) */
+    //    struct sockaddr* saddr; /* send (will not be necessary anymore! @todo remove when ice things are working) */
     uv_udp_t sock;
     uv_loop_t* loop;
 

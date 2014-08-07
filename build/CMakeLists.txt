@@ -32,7 +32,6 @@ set(lib_sources
   ${sd}/stun/Attribute.cpp
   ${sd}/stun/Types.cpp
   ${sd}/stun/Utils.cpp
-  ${sd}/ice/ICE.cpp
   ${sd}/ice/Utils.cpp
   ${sd}/ice/Candidate.cpp
   ${sd}/ice/Agent.cpp
