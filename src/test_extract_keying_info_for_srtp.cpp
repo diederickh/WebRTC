@@ -14,7 +14,10 @@
 
   NOTE: I'm no security or openSSL export so use this code at own risk.
 
-
+  ----------------------------------
+  Related SSL functions:
+    - SSL_get_selected_srtp_profile() - returns e.g. SRTP_AES128_CM_SHA1_80
+    - SSL_CIPHER_get_name(SSL_get_current_cipher(ssl)) - returns e.g. AES256-SHA 
   ----------------------------------
 
   Create server/client self-signed certificate/key (self signed, DONT ADD PASSWORD) 
@@ -52,10 +55,10 @@ struct Agent {
   int is_server;
   BIO* in_bio;
   BIO* out_bio;
-  unsigned char* client_key;
-  unsigned char* client_salt;
-  unsigned char* server_key;
-  unsigned char* server_salt;
+  unsigned char* remote_key;
+  unsigned char* remote_salt;
+  unsigned char* local_key;
+  unsigned char* local_salt;
 };
 
 struct App {
@@ -134,18 +137,18 @@ int main() {
     printf("Error: cannot export the keying material.\n");
     exit(1);
   }
-
+  
   /* set the keying material for the client. */
-  client.client_key  = keying_material;
-  client.server_key  = client.client_key + SRTP_MASTER_KEY_LEN;
-  client.client_salt = client.server_key + SRTP_MASTER_KEY_LEN;
-  client.server_salt = client.server_salt + SRTP_MASTER_SALT_LEN;
+  server.remote_key = keying_material;
+  server.local_key = server.remote_key + SRTP_MASTER_KEY_LEN;
+  server.remote_salt = server.local_key + SRTP_MASTER_KEY_LEN;
+  server.local_salt = server.local_salt + SRTP_MASTER_SALT_LEN;
 
   /* set the keying material for the server. */
-  server.server_key = keying_material;
-  server.client_key = server.server_key + SRTP_MASTER_KEY_LEN;
-  server.server_salt = server.client_key + SRTP_MASTER_KEY_LEN;
-  server.client_salt = server.server_salt + SRTP_MASTER_SALT_LEN;
+  client.local_key = keying_material;
+  client.remote_key = client.local_key + SRTP_MASTER_KEY_LEN;
+  client.local_salt = client.remote_key + SRTP_MASTER_KEY_LEN;
+  client.remote_salt = client.local_salt + SRTP_MASTER_SALT_LEN;
   
   return 0;
 }
