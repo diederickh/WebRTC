@@ -119,9 +119,11 @@ int main() {
   printf("\n--------\n");
 
   /* we use our reader to parse the message */
+  /* @todo stun::Reader does not call on_message anymore */
+  stun::Message msg;
   stun::Reader reader;
-  reader.on_message = on_stun_message;
-  reader.process((uint8_t*)respv4, sizeof(respv4) - 1 ); /* we do -1 to exclude the string terminating nul char. */
+  //  reader.on_message = on_stun_message;
+  reader.process((uint8_t*)respv4, sizeof(respv4) - 1, &msg); /* we do -1 to exclude the string terminating nul char. */
 
   create_stun_message();
 
@@ -204,6 +206,7 @@ static void create_stun_message() {
 
   /* and read it again. */
   printf("--------------- READ AGAIN --------------- \n");
+  stun::Message msg;
   stun::Reader reader;
-  reader.process(&writer.buffer[0], writer.buffer.size());
+  reader.process(&writer.buffer[0], writer.buffer.size(), &msg);
 }

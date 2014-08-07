@@ -3,8 +3,12 @@
 
 #include <vector>
 #include <ice/Candidate.h>
+#include <dtls/Parser.h>
 
 namespace ice {
+
+  class Stream;
+  typedef void(*stream_data_callback)(Stream* stream, CandidatePair* pair, uint8_t* data, uint32_t nbytes);
 
   enum StreamState {
     STREAM_STATE_NONE = 0x00,
@@ -29,6 +33,8 @@ namespace ice {
     std::vector<Candidate*> local_candidates;                      /* our candidates */
     std::vector<Candidate*> remote_candidates;
     std::vector<CandidatePair*> pairs;                             /* the candidate pairs */
+    stream_data_callback on_data;
+    void* user;
   }; 
 
 } /* namespace ice */

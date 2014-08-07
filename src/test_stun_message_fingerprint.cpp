@@ -41,9 +41,11 @@ int main() {
  printf("\n-----------\n\n");
 
 
+ /* @todo - stun::Reader does not call on_message anymore! */
+ stun::Message msg;
  stun::Reader reader;
- reader.on_message = on_stun_message;
- reader.process((uint8_t*)req, sizeof(req) - 1);
+ // reader.on_message = on_stun_message;
+ reader.process((uint8_t*)req, sizeof(req) - 1, &msg);
  
  return 0;
 }

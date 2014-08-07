@@ -2,7 +2,16 @@
 
 namespace ice {
 
-  Agent::Agent() {
+  /* ------------------------------------------------------------------ */
+
+  /* gets called whenever a stream receives data for a candidate pair that needs to be processed. */
+  static void agent_stream_on_data(Stream* stream, CandidatePair* pair, uint8_t* data, uint32_t nbytes);
+
+  /* ------------------------------------------------------------------ */
+
+  Agent::Agent() 
+    :is_lite(true)
+  {
   }
 
   Agent::~Agent() {
@@ -17,7 +26,17 @@ namespace ice {
 
   /* Add a new stream; we take ownership */
   void Agent::addStream(Stream* stream) {
+
+    if (!stream) {
+      printf("ice::Agent - error: trying to add an invalid stream to an agent. Stream == null.\n");
+      return;
+    }
+
     streams.push_back(stream);
+
+    stream->on_data = agent_stream_on_data;
+    stream->user = this;
+
   }
 
   /* Initializes all the streams/candidates */
@@ -32,6 +51,8 @@ namespace ice {
     /* set the parser.ssl for each of the stream candidates, @todo there must be a better API for this. */
     for(size_t i = 0; i < streams.size(); ++i) {
       Stream* stream = streams[i];
+
+      /* @todo - we're going to remove the dtls from candidate; instead CandidatePair gets one. */
       for(size_t k = 0; k < stream->local_candidates.size(); ++k) {
         Candidate* cand = stream->local_candidates[k];
         cand->dtls.ssl = dtls_ctx.createSSL();
@@ -68,6 +89,92 @@ namespace ice {
 
     for (size_t i = 0; i < streams.size(); ++i) {
       streams[i]->setCredentials(ufrag, pwd);
+    }
+  }
+
+  void Agent::handleStunMessage(Stream* stream, CandidatePair* pair, stun::Message* msg) {
+
+    /* Make sure we receive valid input. */
+    if (!stream) {
+      printf("ice::Agent::handleStunMesage() - error: cannot handle stun message, invalid stream given.\n");
+      return;
+    }
+
+    if (!pair) {
+      printf("ice::Agent::handleStunMesage() - error: cannot handle stun message, invald pair given.\n");
+      return;
+    }
+
+    if (!pair->local) {
+      printf("ice::Agent::handleStunMesage() - error: the pair doesn't have a local candidate, which isn't allowed.\n");
+      return;
+    }
+
+    if (!pair->remote) {
+      printf("ice::Agent::handleStunMesage() - error: the pair doesn't have a remote candidate, which isn't allowed.\n");
+      return;
+    }
+
+    if (!msg) {
+      printf("ice::Agent::handleStunMesage() - error: cannot handle stun message because it's invalid.\n");
+      return;
+    }
+
+    /* Handle the message */
+    if (msg->type != stun::STUN_BINDING_REQUEST) {
+      printf("ice::Agent::handleStunMesage() -  error: we only implement ice-controlled mode for now so we must receive a STUN_BINDING_REQUEST first.\n");
+      return;
+    }
+
+    /* Construct our STUN Binding-Success-Response */
+    stun::Message response(stun::STUN_BINDING_RESPONSE);
+    response.copyTransactionID(msg);
+    response.addAttribute(new stun::XorMappedAddress(pair->remote->ip, pair->remote->port));
+    response.addAttribute(new stun::MessageIntegrity());
+    response.addAttribute(new stun::Fingerprint());
+
+    /* Write + send the message. */
+    stun::Writer writer;
+    writer.writeMessage(&response, pair->local->ice_pwd);
+    pair->local->conn.sendTo(pair->remote->ip, pair->remote->port,
+                             &writer.buffer[0], writer.buffer.size());
+
+  }
+
+  /* ------------------------------------------------------------------ */
+
+  static void agent_stream_on_data(Stream* stream, CandidatePair* pair, uint8_t* data, uint32_t nbytes) {
+    printf("agent_stream_on_data - verbose: received data form a stream.\n");
+
+    int r;
+    stun::Message msg;
+    Agent* agent = static_cast<Agent*>(stream->user);
+
+    r = agent->stun.process(data, nbytes, &msg);
+    if (r == 0) {
+      agent->handleStunMessage(stream, pair, &msg);
+    }
+    else if (r == 1) {
+
+      /* Not SSL context yet, create it! */
+      if (pair->dtls.ssl == NULL) {
+        pair->dtls.ssl = agent->dtls_ctx.createSSL();
+        if (!pair->dtls.ssl) {
+          printf("agent_stream_on_data - error: cannot allocate a new SSL object.\n");
+          exit(1);
+        }
+        if (!pair->dtls.init()) {
+          printf("agent_Stream_on_data - error: cannot initialize the dtls parser.\n");
+          exit(1);
+        }
+      }
+      
+      /* Process the 'non' stun data, which should be DTLS */
+      pair->dtls.process(data, nbytes);
+    }
+    else {
+      printf("agent_stream_on_data - error: unhandled return value of stun::Reader::process().\n");
+      exit(1);
     }
   }
 

@@ -5,13 +5,14 @@ namespace ice {
   /* ------------------------------------------------------------------ */
 
   /* gets called when a candidate receives data. */
-  static void stream_on_data(std::string rip, uint16_t rport, std::string lip, uint16_t lport, uint8_t* data, uint32_t nbytes, void* user); 
+  static void stream_on_data(std::string rip, uint16_t rport, std::string lip, uint16_t lport, uint8_t* data, uint32_t nbytes, void* user);  
 
   /* ------------------------------------------------------------------ */
 
-
   Stream::Stream() 
     :state(STREAM_STATE_NONE)
+    ,on_data(NULL)
+    ,user(NULL)
   {
 
   }
@@ -137,6 +138,17 @@ namespace ice {
 
   /* ------------------------------------------------------------------ */
 
+  /* 
+     This is called whenever a candidate receives data. Each stream (e.g. video, audio, or muxed),
+     will check if there is an existing candidate pair for the transport. If it doesn't exist
+     it will create a new one. 
+
+     It may happen that a candidate pair is created but never used because another pair is selected.
+     At this moment the candidate pair is not free'd and simply ignored.
+
+     @todo - stream_on_data, implement candidate/candidate-pair states, so we can free unused pairs.
+
+   */
   static void stream_on_data(std::string rip, uint16_t rport, 
                              std::string lip, uint16_t lport, 
                              uint8_t* data, uint32_t nbytes, void* user) 
@@ -174,9 +186,9 @@ namespace ice {
       exit(1);
     }
 
-    pair->process(data, nbytes);
-
-    printf("stream_on_data - found a candidate pair!\n");
+    if (stream->on_data) {
+      stream->on_data(stream, pair, data, nbytes);
+    }
   }
 
 } /* namespace ice */

@@ -36,6 +36,8 @@ namespace ice {
     rtc::ConnectionUDP conn;                                          /* the (udp for now) connection on which we receive data; later we can decouple this if necessary. */
     stun::Reader stun;                                                /* the stun reader; used to parse incoming stun messages */
     dtls::Parser dtls;                                                /* used to handle the dtls handshake */
+    connection_on_data_callback on_data;
+    void* user;
   };
 
   class CandidatePair {
@@ -43,14 +45,12 @@ namespace ice {
     CandidatePair();
     CandidatePair(Candidate* local, Candidate* remote);
     ~CandidatePair();
-    void process(uint8_t* data, uint32_t nbytes);
+//    void process(uint8_t* data, uint32_t nbytes);
 
   public:
     Candidate* local;
     Candidate* remote;
-    stun::Reader stun;
     dtls::Parser dtls;
-    dtls::Context dtls_ctx; /* @todo dtls_ctx is temporary - only used to test with different data streams per candidatepair */
   };
 
 } /* namespace ice */

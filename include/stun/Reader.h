@@ -43,8 +43,8 @@ namespace stun {
 
   public:
     Reader();
-    void process(uint8_t* data, uint32_t nbytes);
-    std::string password; /* TEMP: @todo stun::Reader(), password is temporary and should be remove at some point.*/
+    int process(uint8_t* data, uint32_t nbytes, Message* msg);
+    //    std::string password; /* TEMP: @todo stun::Reader(), password is temporary and should be remove at some point.*/
 
   private:
     uint8_t readU8();
@@ -58,9 +58,9 @@ namespace stun {
     uint8_t* ptr();                       /* returns a pointer to the current read index of the buffer. */
     
   public:
-    stun_on_message_callback on_message;
-    stun_on_pass_through on_pass_through;
-    void* user;
+    //    stun_on_message_callback on_message;
+    //    stun_on_pass_through on_pass_through;
+    //   void* user;
     std::vector<uint8_t> buffer;
     size_t dx;
   };

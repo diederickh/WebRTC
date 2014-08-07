@@ -131,10 +131,11 @@ int main() {
 
   sock.on_data = on_udp_data;
   sock.user = (void*)&stun;
-  stun.on_message = on_stun_message;
-  stun.on_pass_through = on_stun_pass_through;
-  stun.user = (void*)&ice;
-  stun.password = ice_pwd;
+  //  stun.on_message = on_stun_message;
+  //  stun.on_pass_through = on_stun_pass_through;
+  //  stun.user = (void*)&ice;
+  /* @todo -> stun::Reader(), doesnt need it's own password; it's stored per Candidate/pair. */
+  //  stun.password = ice_pwd;
   ice.on_data = on_ice_data;
   ice.user = (void*)&sock;
   ice.password = PASSWORD;
@@ -153,8 +154,9 @@ static void on_udp_data(std::string rip, uint16_t rport,
                         std::string lip, uint16_t lport, 
                         uint8_t* data, uint32_t nbytes, void* user) 
 {
+  stun::Message msg;
   stun::Reader* stun = static_cast<stun::Reader*>(user);
-  stun->process(data, nbytes);
+  stun->process(data, nbytes, &msg);
 }
 
 static void on_stun_message(stun::Message* msg, void* user) {

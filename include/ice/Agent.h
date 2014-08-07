@@ -21,6 +21,8 @@
 #include <ice/Types.h>
 #include <ice/Stream.h>
 #include <dtls/Context.h>
+#include <stun/Reader.h>
+#include <stun/Writer.h>
 
 namespace ice {
 
@@ -45,9 +47,14 @@ namespace ice {
     void setCredentials(std::string ufrag, std::string pwd);    /* set the credentials (ice-ufrag, ice-pwd) for all streams. */
     //void addCandidate(uint32_t streamid, Candidate* cand);    /* Add a candidate for a stream, we take ownership of the given candidate. */
 
+    /* ICE */
+    void handleStunMessage(Stream* stream, CandidatePair* pair, stun::Message* msg); /* Handles incoming stun messages for the given stream and candidates. It will make sure the correct action will be taken. */
+
   public:
     std::vector<Stream*> streams;
     dtls::Context dtls_ctx;                                     /* The dtls::Context is used to handle the dtls communication */
+    stun::Reader stun;
+    bool is_lite;                                               /* At this moment we only support ice-lite. */
 
   };
 } /* namespace ice */

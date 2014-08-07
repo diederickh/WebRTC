@@ -13,35 +13,33 @@ namespace stun {
 
   Reader::Reader() 
     :dx(0)
-    ,on_message(NULL)
-    ,on_pass_through(NULL)
-    ,user(NULL)
+     //    ,on_message(NULL)
+     //    ,on_pass_through(NULL)
+     //    ,user(NULL)
   {
   }
 
   /* @todo Reader::process - we can optimize this part by not copying but setting pointers to the  members of the Message. */
   /* @todo Reader::process - we need to implement the rules as described here: http://tools.ietf.org/html/rfc5389#section-7.3 */
-  void Reader::process(uint8_t* data, uint32_t nbytes) {
+  int Reader::process(uint8_t* data, uint32_t nbytes, Message* msg) {
 
     if (!data) {
       printf("stun::Reader - error: received invalid data in Reader::process().\n");
-      return;
-    }
-
-    if (nbytes < 2) {
-      return;
+      return -1;
     }
 
     /* handle non-stun data (e.g. DTLS) */
     //if ( (data[0] & 0xC0) != 0x00) {
     if ( (data[0] & 0xC0) != 0x00) {
-      if (on_pass_through) {
-        on_pass_through(data, nbytes, user);
-      }
-      else {
+      return 1;
+      //      if (on_pass_through) {
+        //on_pass_through(data, nbytes, user);
+        printf("@todo - stun::Reader::process -> create replacement for on_pass_through.\n");
+        /* @todo - stun::Reader::process(), needs to make sure 'pass_through' is called, or the return value should indicate this! */
+        //      }
+        //      else {
         printf("stun::Reader - warning: received non-stun data (first two bits are not zero), and not on_pass_through handler set.\n");
-      }
-      return;
+        //      }
     }
     
     /* resetting the buffer - @todo - at the bottom of this function we erase all read bytes which isn't 100% necessary as we process a full packet a time */
@@ -52,38 +50,40 @@ namespace stun {
     
     /* A stun message must at least contain 20 bytes. */
     if (buffer.size() < 20) {
-      return;
+      return 1;
     }
     printf("stun::Reader - verbose: data to process: %u bytes, %lu.\n", nbytes, buffer.size());
 
     
     /* create the base message */
-    Message msg;
-    msg.type = readU16();
-    msg.length = readU16();
-    msg.cookie = readU32();
-    msg.transaction[0] = readU32();
-    msg.transaction[1] = readU32();
-    msg.transaction[2] = readU32();
+    //Message msg;
+    msg->type = readU16();
+    msg->length = readU16();
+    msg->cookie = readU32();
+    msg->transaction[0] = readU32();
+    msg->transaction[1] = readU32();
+    msg->transaction[2] = readU32();
 
-    std::copy(data, data + nbytes, std::back_inserter(msg.buffer));
+    std::copy(data, data + nbytes, std::back_inserter(msg->buffer));
 
 
     /* validate */
-    if (!stun_validate_cookie(msg.cookie)) {
+    if (!stun_validate_cookie(msg->cookie)) {
       printf("stun::Reader - error: invalid STUN cookie, number of bytes: %u\n", nbytes);
       printf("stun::Reader - invalid cookie data: %02X %02X %02X %02X\n", data[0], data[1], data[2], data[3]);
 #if 1      
-      if (on_pass_through) {
-        msg.buffer.clear();
+      //      if (on_pass_through) {
+
+        msg->buffer.clear();
         dx = 0;
         printf("TEST: when invalid cookie found, pass the data along.\n");
         printf(">>>>>>>>>\n");
-        on_pass_through(data, nbytes, user);
+        printf("@todo - stun::Reader::process -> create replacement for on_pass_through.\n");
+        //on_pass_through(data, nbytes, user);
         printf("<<<<<<<<<<<\n");
-      }
+
 #endif
-      return;
+        return 1;
     }
 
     /* parse the rest of the message */
@@ -102,7 +102,7 @@ namespace stun {
       attr_length = readU16();
 
       printf("stun::Reader - received message type: %s, Type: %s, Length: %d, bytes left: %u, current index: %ld\n", 
-             message_type_to_string(msg.type).c_str(),
+             message_type_to_string(msg->type).c_str(),
              attribute_type_to_string(attr_type).c_str(), 
              attr_length, 
              bytesLeft(), 
@@ -200,7 +200,7 @@ namespace stun {
         attr->type = attr_type;
         attr->offset = attr_offset;
         attr->nbytes = dx - prev_dx;
-        msg.addAttribute(attr);
+        msg->addAttribute(attr);
       }
 
       /* reset vars used while parsing */
@@ -215,9 +215,12 @@ namespace stun {
     
     dx = 0;
 
-    if (on_message) {
-      on_message(&msg, user);
-    }
+    printf("stun::Reader::process(), on_message is removed, create fix.\n");
+    //    if (on_message) {
+      /* deprecated */
+      //     on_message(&msg, user);
+    //}
+    return 0;
   }
 
   uint32_t Reader::bytesLeft() {
