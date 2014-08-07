@@ -4,15 +4,13 @@
   ---------------------------------
 
   This test shows how one can use openSSL to extract the keying material
-  that is used with SRTP. We use DTLS to exchange the keying material. In this 
-  file we simulate a DTLS client and server which perform the handshake and 
+  that can be used with SRTP. WebRTC uses DTLS to exchange the keying material. 
+  In this file we simulate a DTLS client and server which perform the handshake and 
   exchange cryptographic parameters; once that's done we extract the keying
   material and set the correct key/salts for the client and server. 
 
   See http://tools.ietf.org/html/rfc5764#section-4.2 for a description 
   on how to use the keying material.
-
-  NOTE: I'm no security or openSSL export so use this code at own risk.
 
   ----------------------------------
   Related SSL functions:
@@ -20,12 +18,14 @@
     - SSL_CIPHER_get_name(SSL_get_current_cipher(ssl)) - returns e.g. AES256-SHA 
   ----------------------------------
 
-  Create server/client self-signed certificate/key (self signed, DONT ADD PASSWORD) 
+  Create server/client self-signed certificate/key (self signed, DON'T ADD PASSWORD) 
 
   --
         openssl req -x509 -newkey rsa:2048 -days 3650 -nodes -keyout client-key.pem -out client-cert.pem
         openssl req -x509 -newkey rsa:2048 -days 3650 -nodes -keyout server-key.pem -out server-cert.pem
   -- 
+
+  N.B: I'm no security or openSSL expoet so use this code at own risk.
 
  */
 
