@@ -13,6 +13,8 @@ if(CMAKE_BUILD_TYPE STREQUAL Debug)
   set(debug "debug")
 endif()
 
+#add_definitions("-fsanitize-address-zero-base-shadow")
+
 include_directories(
   ${CMAKE_CURRENT_LIST_DIR}/../src
   ${CMAKE_CURRENT_LIST_DIR}/../include

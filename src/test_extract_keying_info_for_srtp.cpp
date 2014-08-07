@@ -2,6 +2,12 @@
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 
+
+/* SRTP keying material sizes. */
+#define SRTP_MASTER_KEY_LEN 16
+#define SRTP_MASTER_SALT_LEN 14
+#define SRTP_MASTER_LEN (SRTP_MASTER_KEY_LEN + SRTP_MASTER_SALT_LEN)
+
 /* SSL debug */
 #define SSL_WHERE_INFO(ssl, w, flag, msg) {              \
     if(w & flag) {                                       \
@@ -19,6 +25,10 @@ struct Agent {
   int is_server;
   BIO* in_bio;
   BIO* out_bio;
+  unsigned char* client_key;
+  unsigned char* client_salt;
+  unsigned char* server_key;
+  unsigned char* server_salt;
 };
 
 struct App {
@@ -28,6 +38,8 @@ struct App {
 
 static int initialize_app(App* app);
 static int initialize_agent(App* app, Agent* agent, int isserver);
+static int check_output_buffer(Agent* readagent, Agent* writeagent);
+static int check_input_buffer(Agent* readagent, Agent* writeagent);
 static int dtls_context_ssl_verify_peer(int ok, X509_STORE_CTX* ctx);
 static void dtls_parse_ssl_info_callback(const SSL* ssl, int where, int ret);
 
@@ -37,6 +49,9 @@ Agent server;
 
 int main() {
   printf("\n\ntest_extract_keying_info_for_srtp.\n\n");
+
+  /* INITIALIZE AGENTS + APPLICATION */
+  /* ------------------------------- */
 
   if (initialize_app(&application) < 0) {
     exit(1);
@@ -50,9 +65,63 @@ int main() {
     exit(1);
   }
 
+  /* PEFORM THE HANDSHAKE */
+  /* -------------------- */
+
+  while (!SSL_is_init_finished(client.ssl) || !SSL_is_init_finished(server.ssl)) {
+    printf("Processing client:\n");
+    printf("------------------------------------------------------\n");
+    {
+      SSL_do_handshake(client.ssl);
+      check_output_buffer(&client, &server);
+    }
+    printf("\n");
+
+    printf("Processing server:\n");
+    printf("------------------------------------------------------\n");
+    {
+      SSL_do_handshake(server.ssl);
+      check_output_buffer(&server, &client);
+    }
+    printf("\n");
+  }
+
+  /* EXTRACT KEYING INFORMATION */
+  /* -------------------------- */
+
+  /* will hold all of the keying data (2 pairs of key/salt, one for the client the other for server) */
+  unsigned char keying_material[SRTP_MASTER_LEN * 2]; 
+  int r = 0;
+  
+
+  r = SSL_export_keying_material(client.ssl, 
+                                 keying_material, 
+                                 SRTP_MASTER_LEN * 2,
+                                 "EXTRACTOR-dtls_srtp",
+                                 19,
+                                 NULL, 
+                                 0,
+                                 0);
+  
+  if (r != 1) {
+    printf("Error: cannot export the keying material.\n");
+    exit(1);
+  }
+
+  /* set the keying material for the client. */
+  client.client_key  = keying_material;
+  client.server_key  = client.client_key + SRTP_MASTER_KEY_LEN;
+  client.client_salt = client.server_key + SRTP_MASTER_KEY_LEN;
+  client.server_salt = client.server_salt + SRTP_MASTER_SALT_LEN;
+
+  /* set the keying material for the server. */
+  server.server_key = keying_material;
+  server.client_key = server.server_key + SRTP_MASTER_KEY_LEN;
+  server.server_salt = server.client_key + SRTP_MASTER_KEY_LEN;
+  server.client_salt = server.server_salt + SRTP_MASTER_SALT_LEN;
+  
   return 0;
 }
-
 
 static int initialize_app(App* app) {
   FILE* fp;
@@ -206,10 +275,50 @@ static int initialize_agent(App* app, Agent* agent, int isserver) {
     SSL_set_connect_state(agent->ssl); /* in case of a client */
   }
 
-
   return 0;
 }
 
+static int check_output_buffer(Agent* readagent, Agent* writeagent) {
+  if (!readagent) { return -1; } 
+  if (!writeagent) { return -2; } 
+  
+  char buffer[2048] = { 0 } ;
+  int to_read = 0; 
+  int nread = 0;
+
+  /* is there data we need to send? */
+  int pending = BIO_ctrl_pending(readagent->out_bio);
+  printf("Pending in output buffer: %d\n", pending);
+  if (pending <= 0) {
+    return -2;
+  }
+
+  while(pending) {
+
+    /* how many bytes to read. */
+    if (pending >= 2048) {
+      to_read = 2048;
+    }
+    else {
+      to_read = pending;
+    }
+
+    nread = BIO_read(readagent->out_bio, buffer, to_read);
+    if (nread != to_read) {
+      printf("Error: failed readig the necessary amount of bytes from the out bio.\n");
+      exit(1);
+    }
+
+    printf("Process: %d bytes.\n", nread);
+    if (nread) {
+      BIO_write(writeagent->in_bio, buffer, nread);
+    }
+      
+    pending -= to_read;
+  }
+
+  return 0;
+}
 
 static int dtls_context_ssl_verify_peer(int ok, X509_STORE_CTX* ctx) {
   printf("DTLS_CONTEXT_SSL_VERIFY_PEER\n");
