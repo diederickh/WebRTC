@@ -355,7 +355,7 @@ namespace dtls {
 
 
 static int dtls_context_ssl_verify_peer(int ok, X509_STORE_CTX* ctx) {
-  printf("DTLS_CONTEXT_SSL_VERIFY_PEER\n");
+  printf("dtls_context_ssl_verify_peer - verbose - DTLS_CONTEXT_SSL_VERIFY_PEER\n");
   return 1;
 }
 

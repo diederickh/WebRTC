@@ -164,17 +164,48 @@ namespace ice {
           exit(1);
         }
         if (!pair->dtls.init()) {
-          printf("agent_Stream_on_data - error: cannot initialize the dtls parser.\n");
+          printf("agent_stream_on_data - error: cannot initialize the dtls parser.\n");
           exit(1);
         }
       }
       
-      /* Process the 'non' stun data, which should be DTLS */
-      pair->dtls.process(data, nbytes);
-    }
-    else {
-      printf("agent_stream_on_data - error: unhandled return value of stun::Reader::process().\n");
-      exit(1);
+      if (!pair->dtls.isHandshakeFinished()) {
+        /* Process the 'non' stun data, which should be DTLS */
+        pair->dtls.process(data, nbytes);
+      }
+      else {
+
+        /* @todo - okay we need to code this whole function way better ^.^ */
+        if (pair->dtls.mode == dtls::DTLS_MODE_SERVER) {
+          if (pair->srtp_reader.is_initialized == false) {
+
+            /* After processing the data, check if the handshake is finished and if so, use the extracted key/salts for SRTP. */
+            if (!pair->dtls.extractKeyingMaterial()) {
+              printf("agent_stream_on_data - error: cannot extract keying material.\n");
+              exit(1);
+            }
+
+            //if (!pair->srtp_reader.init(pair->dtls.client_key, pair->dtls.client_salt)) {
+            if (!pair->srtp_reader.init(pair->dtls.remote_key, pair->dtls.remote_salt)) {
+              printf("agent_stream_on_data - error: cannot init the srtp reader.\n");
+              exit(1);
+            }
+          }
+        }
+        else {
+          printf("agent_stream_on_data - error: only implmenting the DTLS_MODE_SERVER for now.\n");
+          exit(1);
+        }
+        
+        /* Handshake ready, so here the SRTP reader should be ready as well!. */
+        if (false == pair->srtp_reader.is_initialized) {
+          printf("agent_stream_on_data - error: dtls handshake done, but srtp reader not initialized - not supposed to happen!\n");
+          exit(1);
+        }
+
+        /* Ok, ready to decode some data with libsrtp. */
+        pair->srtp_reader.process(data, nbytes);
+      }
     }
   }
 

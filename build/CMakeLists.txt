@@ -14,6 +14,7 @@ if(CMAKE_BUILD_TYPE STREQUAL Debug)
 endif()
 
 #add_definitions("-fsanitize-address-zero-base-shadow")
+#add_definitions("-fsanitize=address")
 
 include_directories(
   ${CMAKE_CURRENT_LIST_DIR}/../src
@@ -41,6 +42,7 @@ set(lib_sources
   ${sd}/dtls/Context.cpp
   ${sd}/dtls/Parser.cpp
   ${sd}/rtc/Connection.cpp
+  ${sd}/srtp/Reader.cpp
 )
 
 set(lib_headers
@@ -54,6 +56,7 @@ set(app_libs
   ${extern_lib_dir}/libz.a               # for crc32
   ${extern_lib_dir}/libjansson.a         # for signaling, parsing json messages
   ${extern_lib_dir}/libwebsockets.a      # for signaling, handling i/o
+  ${extern_lib_dir}/libsrtp.a            # used to handle SRTP packets.
 )
 
 add_library(${lib} STATIC ${lib_sources})

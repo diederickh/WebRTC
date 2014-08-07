@@ -7,6 +7,7 @@
 #include <stun/Reader.h>
 #include <dtls/Parser.h>
 #include <dtls/Context.h>
+#include <srtp/Reader.h>
 
 namespace ice {
 
@@ -55,6 +56,7 @@ namespace ice {
     Candidate* local;                                                 /* local candidate; which has a socket (ConnectionUDP) */
     Candidate* remote;                                                /* the remote party from which we receive data and send data towards. */
     dtls::Parser dtls;                                                /* each candidate pair has it's own dtls context; each pair has it's own 'flow' of data */
+    srtp::Reader srtp_reader;                                         /* used to decode incoming SRTP packets. */
   };
 
 } /* namespace ice */

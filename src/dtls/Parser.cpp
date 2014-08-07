@@ -8,10 +8,15 @@ namespace dtls {
   Parser::Parser()
     :ssl(NULL)
     ,state(DTLS_STATE_NONE)
+    ,mode(DTLS_MODE_SERVER)
     ,in_bio(NULL)
     ,out_bio(NULL)
     ,on_data(NULL)
     ,user(NULL)
+    ,local_key(NULL)
+    ,local_salt(NULL)
+    ,remote_key(NULL)
+    ,remote_salt(NULL)
   {
     buffer = new uint8_t[DTLS_BUFFER_SIZE];
     if (!buffer) {
@@ -75,8 +80,14 @@ namespace dtls {
     /* set in and output bios. */
     SSL_set_bio(ssl, in_bio, out_bio);
 
-    SSL_set_accept_state(ssl); /* in case we're a server */
-    //SSL_set_connect_state(ssl); /* in case we're a client */
+    if (mode == DTLS_MODE_SERVER) { 
+      SSL_set_accept_state(ssl); /* in case we're a server */
+    }
+    else if(mode == DTLS_MODE_CLIENT) {
+      //SSL_set_connect_state(ssl); /* in case we're a client */
+      printf("dtls::Parser - error: not yet handling client state for dtls::Parser().\n");
+      exit(1);
+    }
     
     return true;
   }
@@ -89,27 +100,96 @@ namespace dtls {
     }
 
     if (!data) {
-      printf("Warning: calling Parser::process w/o valid data.\n");
+      printf("dtls::Parser - warning: calling Parser::process w/o valid data.\n");
       return;
     }
 
     if (!nbytes) {
-      printf("Warning: calling Parser::process with invalid nbytes.\n");
+      printf("dtls::Parser - warning: calling Parser::process with invalid nbytes.\n");
       return;
     }
 
     int written = BIO_write(in_bio, data, nbytes);
     if (written > 0) {
-      printf("Written: %d\n", written);
+      printf("dtls::Parser - verbose: written: %d\n", written);
       if (!SSL_is_init_finished(ssl)) {
         SSL_do_handshake(ssl);
         checkOutputBuffer();
       }
     }
     else {
-      printf("Error: %d\n", written);
+      printf("dtls::Parser - error: %d\n", written);
+    }
+  }
+  
+  bool Parser::isHandshakeFinished() {
+
+    if (!ssl) { 
+      return false;
     }
 
+    return SSL_is_init_finished(ssl);
+  }
+
+  bool Parser::extractKeyingMaterial() {
+
+    int r = 0;
+
+    if (!isHandshakeFinished()) {
+      printf("dtls::Parser::extractKeyingMaterial()  - error: cannot extract keying material when the handshake isn't finished.\n");
+      return false;
+    }
+
+    r = SSL_export_keying_material(ssl, 
+                                   keying_material, 
+                                   DTLS_SRTP_MASTER_LEN * 2,
+                                   "EXTRACTOR-dtls_srtp",
+                                   19,
+                                   NULL, 
+                                   0,
+                                   0);
+  
+    if (r != 1) {
+      printf("dtls::Parser::extractKeyingMaterial() - error: cannot export the keying material.\n");
+      exit(1);
+    }
+
+    if (mode == DTLS_MODE_SERVER) {
+      /* set the keying material in case we are a server. */
+      remote_key = keying_material;
+      local_key  = remote_key + DTLS_SRTP_MASTER_KEY_LEN;
+      remote_salt = local_key + DTLS_SRTP_MASTER_KEY_LEN;
+      local_salt = remote_salt + DTLS_SRTP_MASTER_SALT_LEN;
+
+    }
+    else if (mode == DTLS_MODE_CLIENT) {
+      printf("dtls::Parser::extractKeyingMaterial() - error: client keying material not tested.\n");
+      /* set the keying material in case we are a client. */
+      local_key = keying_material;
+      remote_key = local_key + DTLS_SRTP_MASTER_KEY_LEN;
+      local_salt = remote_key + DTLS_SRTP_MASTER_KEY_LEN;
+      remote_salt = local_salt + DTLS_SRTP_MASTER_SALT_LEN;
+      exit(1);
+    }
+    else {
+      printf("dtls::Parser::extractKeyingMaterial() - error: unhandled dtls::Parser mode!.\n");
+      exit(1);
+    }
+
+#if 1
+    /* show some debug info (p->name probably = SRTP_AES128_CM_SHA1_80) */
+    SRTP_PROTECTION_PROFILE *p = SSL_get_selected_srtp_profile(ssl);
+    if(!p) {
+      printf("dtls::Parser::extractKeyingMaterial() - error: cannot extract the srtp_profile.\n");
+      exit(1);
+    }
+    printf("dtls::Parser::extractKeyingMaterial() - verbose: protection profile: %s\n", p->name);
+
+    /* cipher probably is AES256-SHA */
+    printf("dtls::Parser::extractKeyingMaterial() - verbose: cipher: %s\n", SSL_CIPHER_get_name(SSL_get_current_cipher(ssl)));
+#endif
+
+    return true;
   }
 
   void Parser::checkOutputBuffer() {
@@ -135,7 +215,7 @@ namespace dtls {
 
       nread = BIO_read(out_bio, buffer, to_read);
       if (nread != to_read) {
-        printf("Error: failed readig the necessary amount of bytes from the out bio.\n");
+        printf("dtls::Parser - error: failed readig the necessary amount of bytes from the out bio.\n");
         exit(1);
       }
       
@@ -146,7 +226,7 @@ namespace dtls {
       pending -= to_read;
     }
     
-    printf("Pending in out_bio: %d\n", pending);
+    printf("dtls::Parser - verbose: pending in out_bio: %d\n", pending);
   }
 
 } /* namespace dtls */
