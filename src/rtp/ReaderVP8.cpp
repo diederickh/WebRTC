@@ -7,10 +7,6 @@ namespace rtp {
 
   /* ----------------------------------------------------------- */
 
-  static uint16_t rtp_vp8_read_u16_picture_id(uint8_t* ptr);     /* reads the u16 picture id */
-  
-  /* ----------------------------------------------------------- */
-
   ReaderVP8::ReaderVP8() {
     reset();
   }
@@ -122,12 +118,5 @@ namespace rtp {
     P = 0;
   }
 
-  static uint16_t rtp_vp8_read_u16_picture_id(uint8_t* ptr) {
-    uint16_t r = 0;
-    uint8_t* p = (uint8_t*)&r;
-    p[0] = ptr[1];
-    p[1] = (p[0] & 0x7F);
-    return r;
-  }
 
 } /* namespace rtp */
