@@ -203,9 +203,14 @@ namespace ice {
         }
 
         /* Ok, ready to decode some data with libsrtp. */
-        pair->srtp_reader.process(data, nbytes);
-        if (stream->on_rtp) {
-          stream->on_rtp(stream, pair, data, nbytes, stream->user_rtp);
+        int len = pair->srtp_reader.process(data, nbytes);
+        if (len > 0) {
+          if (stream->on_rtp) {
+            stream->on_rtp(stream, pair, data, len, stream->user_rtp);
+          }
+        } 
+        else {
+          /* @todo we need to handle the srtp decoding error! */
         }
       }
     }

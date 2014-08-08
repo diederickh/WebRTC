@@ -44,7 +44,9 @@ set(lib_sources
   ${sd}/rtc/Connection.cpp
   ${sd}/srtp/Reader.cpp
   ${sd}/rtp/ReaderVP8.cpp
-  ${sd}/rtp/Utils.cpp
+  ${sd}/rtp/PacketVP8.cpp
+  ${sd}/video/AggregatorVP8.cpp
+  ${sd}/video/WriterIVF.cpp
 )
 
 set(lib_headers

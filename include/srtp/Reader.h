@@ -24,7 +24,7 @@ namespace srtp {
     Reader();
     ~Reader();
     bool init(uint8_t* key, uint8_t* salt); 
-    bool process(uint8_t* data, uint32_t nbytes);          /* process raw incoming bytes with SRTP data. */
+    int process(uint8_t* data, uint32_t nbytes);          /* process raw incoming bytes with SRTP data. returns the number of bytes in the rtp packet or < 0 on error. */
 
   public:
     srtp_t session;

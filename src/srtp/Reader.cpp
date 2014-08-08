@@ -78,7 +78,7 @@ namespace srtp {
     return true;
   }
 
-  bool Reader::process(uint8_t* data, uint32_t nbytes) {
+  int Reader::process(uint8_t* data, uint32_t nbytes) {
 
     err_status_t err;
     int len = nbytes;
@@ -91,12 +91,12 @@ namespace srtp {
     err = srtp_unprotect(session, data, &len);
     if (err != err_status_ok) {
       printf("srtp::Reader - error: cannot unprotect the given SRTP packet: %d\n", err);
-      return false;
+      return -1;
     }
     
     printf("srtp::Reader - verbose: successfully unprotected a SRTP packet! length: %d\n", len);
 
-    return true;
+    return len;
   }
 
 } /* namespace srtp */
