@@ -12,7 +12,9 @@ namespace ice {
   Stream::Stream() 
     :state(STREAM_STATE_NONE)
     ,on_data(NULL)
-    ,user(NULL)
+    ,user_data(NULL)
+    ,on_rtp(NULL)
+    ,user_rtp(NULL)
   {
 
   }
@@ -187,7 +189,7 @@ namespace ice {
     }
 
     if (stream->on_data) {
-      stream->on_data(stream, pair, data, nbytes);
+      stream->on_data(stream, pair, data, nbytes, stream->user_data);
     }
   }
 

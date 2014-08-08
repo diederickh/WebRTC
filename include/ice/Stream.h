@@ -8,7 +8,10 @@
 namespace ice {
 
   class Stream;
-  typedef void(*stream_data_callback)(Stream* stream, CandidatePair* pair, uint8_t* data, uint32_t nbytes);
+
+  /* gets called whenever a cadidate pair receives data from the socket. */
+  typedef void(*stream_data_callback)(Stream* stream, CandidatePair* pair, uint8_t* data, uint32_t nbytes, void* user);
+
 
   enum StreamState {
     STREAM_STATE_NONE = 0x00,
@@ -34,7 +37,9 @@ namespace ice {
     std::vector<Candidate*> remote_candidates;                                                  /* our remote candidates */
     std::vector<CandidatePair*> pairs;                                                          /* the candidate pairs */
     stream_data_callback on_data;                                                               /* the stream data callback; is called whenever one of the transports receives data; the Agent handles incoming data. */
-    void* user;                                                                                 /* gets passed into the on_data callback. */
+    stream_data_callback on_rtp;                                                                /* is called whenever there is decoded rtp data; it's up to the user to call this at the right time, e.g. see Agent.cpp */
+    void* user_data;                                                                            /* user data that is passed to the on_data handler. */
+    void* user_rtp;                                                                             /* user data that is passed to the on_rtp handler. */
   }; 
 
 } /* namespace ice */

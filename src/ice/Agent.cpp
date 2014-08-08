@@ -5,7 +5,7 @@ namespace ice {
   /* ------------------------------------------------------------------ */
 
   /* gets called whenever a stream receives data for a candidate pair that needs to be processed. */
-  static void agent_stream_on_data(Stream* stream, CandidatePair* pair, uint8_t* data, uint32_t nbytes);
+  static void agent_stream_on_data(Stream* stream, CandidatePair* pair, uint8_t* data, uint32_t nbytes, void* user);
 
   /* ------------------------------------------------------------------ */
 
@@ -35,8 +35,7 @@ namespace ice {
     streams.push_back(stream);
 
     stream->on_data = agent_stream_on_data;
-    stream->user = this;
-
+    stream->user_data = this;
   }
 
   /* Initializes all the streams/candidates */
@@ -143,12 +142,12 @@ namespace ice {
 
   /* ------------------------------------------------------------------ */
 
-  static void agent_stream_on_data(Stream* stream, CandidatePair* pair, uint8_t* data, uint32_t nbytes) {
+  static void agent_stream_on_data(Stream* stream, CandidatePair* pair, uint8_t* data, uint32_t nbytes, void* user) {
     printf("agent_stream_on_data - verbose: received data form a stream.\n");
 
     int r;
     stun::Message msg;
-    Agent* agent = static_cast<Agent*>(stream->user);
+    Agent* agent = static_cast<Agent*>(user);
 
     r = agent->stun.process(data, nbytes, &msg);
     if (r == 0) {
@@ -205,6 +204,9 @@ namespace ice {
 
         /* Ok, ready to decode some data with libsrtp. */
         pair->srtp_reader.process(data, nbytes);
+        if (stream->on_rtp) {
+          stream->on_rtp(stream, pair, data, nbytes, stream->user_rtp);
+        }
       }
     }
   }

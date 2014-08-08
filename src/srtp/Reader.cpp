@@ -53,7 +53,7 @@ namespace srtp {
     crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy.rtp);   /* @todo see SSL_get_selected_srtp_profile() to extract the name */
     crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy.rtcp);  /* @todo see SSL_get_selected_srtp_profile() to extract the name */
 
-    policy.key = new uint8_t[SRTP_READER_MASTER_LEN];         /* from janus-gateway, why the + 8 ?, @todo - make sure to cleanup somewhere */
+    policy.key = new uint8_t[SRTP_READER_MASTER_LEN];         /* @todo - make sure to cleanup somewhere */
     policy.ssrc.type = ssrc_any_inbound;    
     policy.window_size = 128;                                 /* @todo  http://mxr.mozilla.org/mozilla-central/source/media/webrtc/signaling/src/mediapipeline/SrtpFlow.cpp */
     policy.allow_repeat_tx = 0;

@@ -43,6 +43,8 @@ set(lib_sources
   ${sd}/dtls/Parser.cpp
   ${sd}/rtc/Connection.cpp
   ${sd}/srtp/Reader.cpp
+  ${sd}/rtp/ReaderVP8.cpp
+  ${sd}/rtp/Utils.cpp
 )
 
 set(lib_headers
