@@ -47,6 +47,8 @@ set(lib_sources
   ${sd}/rtp/PacketVP8.cpp
   ${sd}/video/AggregatorVP8.cpp
   ${sd}/video/WriterIVF.cpp
+  ${sd}/video/EncoderVP8.cpp
+  ${sd}/video/EncoderSettings.cpp
 )
 
 set(lib_headers
@@ -54,13 +56,15 @@ set(lib_headers
 )
 
 set(app_libs
-  ${extern_lib_dir}/libssl.a             # for hmac/sha/ssl
-  ${extern_lib_dir}/libcrypto.a          # for hmac/sha/ssl
-  ${extern_lib_dir}/libuv.a              # for networking
-  ${extern_lib_dir}/libz.a               # for crc32
-  ${extern_lib_dir}/libjansson.a         # for signaling, parsing json messages
-  ${extern_lib_dir}/libwebsockets.a      # for signaling, handling i/o
-  ${extern_lib_dir}/libsrtp.a            # used to handle SRTP packets.
+  ${extern_lib_dir}/libssl.a                           # for hmac/sha/ssl
+  ${extern_lib_dir}/libcrypto.a                        # for hmac/sha/ssl
+  ${extern_lib_dir}/libuv.a                            # for networking
+  ${extern_lib_dir}/libz.a                             # for crc32
+  ${extern_lib_dir}/libjansson.a                       # for signaling, parsing json messages
+  ${extern_lib_dir}/libwebsockets.a                    # for signaling, handling i/o
+  ${extern_lib_dir}/libsrtp.a                          # used to handle SRTP packets.
+  ${extern_lib_dir}/libvpx.a                           # encoding/decoding vp8
+  ${extern_lib_dir}/libvideogenerator.a                # used for test purposes; 
 )
 
 add_library(${lib} STATIC ${lib_sources})
@@ -119,6 +123,11 @@ target_link_libraries("${test}${debug}" ${lib} ${app_libs})
 install(TARGETS "${test}${debug}" DESTINATION bin)
 
 set(test test_extract_keying_info_for_srtp)
+add_executable("${test}${debug}" ${sd}/${test}.cpp)
+target_link_libraries("${test}${debug}" ${lib} ${app_libs})
+install(TARGETS "${test}${debug}" DESTINATION bin)
+
+set(test test_video_encoder)
 add_executable("${test}${debug}" ${sd}/${test}.cpp)
 target_link_libraries("${test}${debug}" ${lib} ${app_libs})
 install(TARGETS "${test}${debug}" DESTINATION bin)
