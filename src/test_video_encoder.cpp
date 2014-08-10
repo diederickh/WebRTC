@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <video/EncoderSettings.h>
 #include <video/EncoderVP8.h>
+#include <rtp/WriterVP8.h>
+#include <rtp/ReaderVP8.h>
 
 extern "C" {
 #  include <video_generator.h>
@@ -11,15 +13,18 @@ extern "C" {
 #define WIDTH 640
 #define HEIGHT 480
 #define FRAMERATE 25
+#define RTP_PACKET_SIZE (1000)
+
+video::EncoderSettings settings;
+video::EncoderVP8 encoder;
+rtp::WriterVP8 rtp_writer;
 
 static void on_vp8_packet(video::EncoderVP8* enc, const vpx_codec_cx_pkt_t* pkt, int64_t pts);
+static void on_rtp_packet(rtp::PacketVP8* pkt, void* user);
 
 int main() {
 
   printf("\n\ntest_video_encoder\n\n");
-
-  video::EncoderSettings settings;
-  video::EncoderVP8 encoder;
 
   settings.width = WIDTH;
   settings.height = HEIGHT;
@@ -39,6 +44,7 @@ int main() {
     exit(1);
   }
 
+  rtp_writer.on_packet = on_rtp_packet;
   encoder.on_packet = on_vp8_packet;
 
   while (1) {
@@ -66,4 +72,28 @@ int main() {
 
 static void on_vp8_packet(video::EncoderVP8* enc, const vpx_codec_cx_pkt_t* pkt, int64_t pts) {
   printf("on_vp8_packet - verbose: received a new packet from the encoder, pts: %lld\n", pts);
+ 
+
+  /*
+ uint8_t buffer[RTP_PACKET_SIZE];
+  rtp::PacketVP8 rtp;
+  rtp.version = 2;
+  rtp.payload_type = 100;
+  rtp.timestamp = pkt->data.frame.pts * 90;
+
+  rtp::rtp_vp8_encode(pkt, &rtp, buffer, RTP_PACKET_SIZE);
+  */
+
+  rtp_writer.packetize(pkt);
+  
+  //rtp::rtp_vp8_encode(pkt, RTP_PACKET_SIZE, buffer, RTP_PACKET_SIZE);
 }
+
+static void on_rtp_packet(rtp::PacketVP8* pkt, void* user) {
+  printf("on_rtp_packet - verbose, received rtp packet.\n");
+  
+  rtp::PacketVP8 output;
+  rtp::rtp_vp8_decode(pkt->payload, pkt->nbytes, &output);
+  
+}
+ 

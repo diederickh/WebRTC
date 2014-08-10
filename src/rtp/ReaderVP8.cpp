@@ -51,10 +51,10 @@ namespace rtp {
     }
 
     if(pkt->I) {
-      pkt->M         = (buf[0] & 0x80) >> 7;                                /* M, PictureID extension flag. */
+      pkt->M = (buf[0] & 0x80) >> 7;                                        /* M, PictureID extension flag. */
 
       if(pkt->M) {                                                          /* M, if M == 1, the picture ID takes 16 bits */
-        pkt->PictureID = ntohs(*(uint16_t*)buf) & 0x7FF;
+        pkt->PictureID = ntohs(*(uint16_t*)buf) & 0x7FFF;
         buf += 2;
         len -= 2;
       }

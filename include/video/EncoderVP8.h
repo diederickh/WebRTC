@@ -6,6 +6,12 @@
   Basic implementation of the VP8 encoder. Used to encode YUV420P data that 
   one can stream to a WebRTC capable agent.
 
+  Todo
+  ----
+  
+  Optimize for low latency:
+      - https://groups.google.com/a/webmproject.org/forum/#!topic/webm-discuss/TNPgd7Tf9jQ
+
  */
 
 #ifndef VIDEO_ENCODER_VP8_H

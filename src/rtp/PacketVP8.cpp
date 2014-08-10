@@ -11,6 +11,7 @@ namespace rtp {
   }
 
   void PacketVP8::reset() {
+
     /* rtp header */
     version = 0; 
     padding = 0;

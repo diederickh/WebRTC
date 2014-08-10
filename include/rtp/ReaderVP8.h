@@ -1,7 +1,7 @@
 /*
 
-  RTP VP8 extension
-  -----------------
+  RTP VP8 extension (writer)
+  --------------------------
 
   See http://tools.ietf.org/html/draft-ietf-payload-vp8-11#section-4.2
 
