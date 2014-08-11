@@ -1,3 +1,17 @@
+/*
+
+  WriterIVF
+  ---------
+  
+  Writes a .ivf file with VP8 data. You can use avconf to mux the 
+  vp8 data into a webm file.
+
+
+  ````sh
+  ./avconv -f ivf -i test.ivf -vcodec copy out.webm
+  ````
+  
+ */
 #ifndef VIDEO_WRITER_IVF
 #define VIDEO_WRITER_IVF
 

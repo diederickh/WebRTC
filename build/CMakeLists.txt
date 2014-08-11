@@ -43,6 +43,7 @@ set(lib_sources
   ${sd}/dtls/Parser.cpp
   ${sd}/rtc/Connection.cpp
   ${sd}/srtp/Reader.cpp
+  ${sd}/srtp/ContextSRTP.cpp
   ${sd}/rtp/ReaderVP8.cpp
   ${sd}/rtp/WriterVP8.cpp
   ${sd}/rtp/PacketVP8.cpp

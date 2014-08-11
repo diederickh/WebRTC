@@ -1,3 +1,4 @@
+#include <uv.h> /* @todo remove, tmp used to keep track of timestamp */
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -28,8 +29,8 @@ namespace rtp {
 
     srand(time(NULL));
     picture_id = rand();
-    seqnum = rand();
-    ssrc = rand();
+    seqnum = (rand() + 1) & 0x7FFFF;  /* not 0 */
+    ssrc = (rand() + 1) & 0x7FFFF; /* not 0 */
   }
 
   WriterVP8::~WriterVP8() {
@@ -41,6 +42,16 @@ namespace rtp {
   }
 
   int WriterVP8::packetize(const vpx_codec_cx_pkt_t* pkt) {
+    /* @todo tmp: hardcoding timestamp to test RTP stream */
+    static uint64_t start_time = 0;
+    uint64_t ts = 0;
+    if (0 == start_time) {
+      start_time = uv_hrtime();
+    }
+    ts = ((uv_hrtime() - start_time) / (1000llu * 1000llu)) * 90;
+    printf("TIMESTAMP: %llu\n", ts);
+    /* @todo - end */
+    
 
     if (!pkt) { return -1; } 
     if (!buffer) { return -2; } 
@@ -68,11 +79,13 @@ namespace rtp {
        
 
     /* update the given PacketVP8 so it fits the RFC */
-    rtp.extension = 1;                                               /* RTP: extension header? -> yes, VP8 */
+    rtp.version = 2;                                                 /* RTP: version. */  
+    rtp.extension = 0;                                               /* RTP: extension header? -> yes, VP8 */
     rtp.csrc_count = 0;                                              /* RTP: num of csrc identifiers */
     rtp.sequence_number = seqnum;                                    /* RTP: sequence number. */
     rtp.timestamp = pkt->data.frame.pts * 90;                        /* RTP: timestamp: 90hz. */
     rtp.ssrc = ssrc;                                                 /* RTP: ssrc */
+    rtp.payload_type = 100;
     rtp.PID = pkt->data.frame.partition_id;                          /* RTP VP8: partition index. */
     rtp.S = 1;                                                       /* RTP VP8: start of first VP8 partition */
     rtp.X = 1;                                                       /* RTP VP8: extended control bits are present. */ 
@@ -80,8 +93,6 @@ namespace rtp {
     rtp.M = 1;                                                       /* RTP VP8: we use 15 bits for the picture_id */
     rtp.PictureID = picture_id;                                      /* RTP VP8: picture id */
     rtp.payload = buffer;
-
-   
    
     if (pkt->data.frame.flags & VPX_FRAME_IS_DROPPABLE) {
       exit(1);
@@ -96,6 +107,7 @@ namespace rtp {
       bytes_left -= packet_size;
 
       /* set RTP packet properties */
+      rtp.sequence_number = seqnum;
       rtp.marker = (packet_size < mtu) && (pkt->data.frame.flags & VPX_FRAME_IS_FRAGMENT) == 0;
 
       /* RTP header */
@@ -129,18 +141,18 @@ namespace rtp {
       on_packet(&rtp, user);
 
 #if 0
-      printf("WriterVP8::packtize - verbose: X: %d, N: %d, S: %d, PID: %d, "
-           "I: %d, L: %d, T: %d, K: %d, M:%d, PictureID: %u, len: %u\n",
-           rtp.X, rtp.N, rtp.S, rtp.PID,
-           rtp.I, rtp.L, rtp.T, rtp.K, rtp.M, rtp.PictureID, rtp.nbytes
+      printf("WriterVP8::packtize - verbose: X: %d, N: %d, S: %d, PID: %d, payload_type: %d, SSRC: %u"
+             "I: %d, L: %d, T: %d, K: %d, M:%d, PictureID: %u, len: %u, timestamp: %u\n",
+             rtp.X, rtp.N, rtp.S, rtp.PID, rtp.payload_type, rtp.ssrc,
+             rtp.I, rtp.L, rtp.T, rtp.K, rtp.M, rtp.PictureID, rtp.nbytes, rtp.timestamp
            );
 #endif
 
       rtp.S = 0; /* for all other the 'start of partition is 0', except first packet the S = 0. */
+      seqnum++;
     }
 
     picture_id = (picture_id + 1) & 0x7FFF;
-    seqnum++;
 
     return 0;
   }

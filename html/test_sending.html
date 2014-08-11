@@ -49,6 +49,7 @@
      console.log("ADD STREAM", evt);
      var receive_video = $('#receive_video')[0];
      receive_video.src = URL.createObjectURL(evt.stream);
+     receive_video.play();
    }
 
  $(document).ready(function() {
@@ -80,8 +81,8 @@
              "m=video 1 RTP/SAVPF 100\r\n" +
              "c=IN IP4 " + $('#server_ip').val() + "\r\n" +
              "a=mid:video\r\n" +
-             "a=sendrcv\r\n" +                                               
-//             "a=recvonly\r\n" +
+             "a=sendrecv\r\n" +                                               
+///             "a=recvonly\r\n" +
              "a=rtcp-mux\r\n" +
              "a=rtpmap:100 VP8/90000\r\n" +
              "a=ice-ufrag:" + $('#server_ufrag').val() + "\r\n" +

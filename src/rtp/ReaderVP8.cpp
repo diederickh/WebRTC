@@ -79,10 +79,10 @@ namespace rtp {
 
     printf("ReaderVP8::process - verbose: version: %d, "
                       "padding: %d, extension: %d, csrc_count: %d, "
-                      "marker: %d, sequence: %u, timestamp: %u, ssrc: %u\n",
+                      "marker: %d, sequence: %u, timestamp: %u, ssrc: %u, payload_type: %u\n",
                        pkt->version, pkt->padding, pkt->extension, 
                        pkt->csrc_count, pkt->marker, pkt->sequence_number, 
-                       pkt->timestamp, pkt->ssrc);
+                       pkt->timestamp, pkt->ssrc, pkt->payload_type);
 
     printf("ReaderVP8::process - verbose: X: %d, N: %d, S: %d, PID: %d, "
            "I: %d, L: %d, T: %d, K: %d, M:%d, PictureID: %u, len: %u\n",

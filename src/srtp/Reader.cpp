@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 
-
 namespace srtp {
 
   Reader::Reader() 
@@ -12,12 +11,14 @@ namespace srtp {
     /* init the srtp library */
     static bool srtplib_is_init = false;
     if (!srtplib_is_init) {
+
       err_status_t err;
       err = srtp_init();
       if (err != err_status_ok) {
         printf("srtp::Reader - error: cannot initialize the srtp session: %d\n", err);
         exit(1);
       }
+
       srtplib_is_init = true;
     }
   }

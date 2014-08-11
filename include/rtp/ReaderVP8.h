@@ -3,7 +3,9 @@
   RTP VP8 extension (writer)
   --------------------------
 
-  See http://tools.ietf.org/html/draft-ietf-payload-vp8-11#section-4.2
+  See:
+  - RFC: http://tools.ietf.org/html/draft-ietf-payload-vp8-11#section-4.2
+  - Example code: https://gist.github.com/roxlu/df0a786a8bf81e75ef0e
 
  */
 #ifndef RTP_READER_VP8 

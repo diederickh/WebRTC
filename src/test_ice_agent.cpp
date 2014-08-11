@@ -7,7 +7,7 @@
 #include <video/WriterIVF.h>
 #include <uv.h>
 
-#define USE_SEND 1        /* Enable sending of VP8 data */
+#define USE_SEND 1         /* Enable sending of VP8 data */
 
 video::AggregatorVP8* aggregator;
 ice::Agent* agent;
@@ -21,8 +21,8 @@ extern "C" {
 #  include <video/EncoderSettings.h>
 #  include <video/EncoderVP8.h>
 #  include <rtp/WriterVP8.h>
-#  define WIDTH 640
-#  define HEIGHT 480
+#  define WIDTH 320
+#  define HEIGHT 240
 #  define FRAMERATE 25
 #  define RTP_PACKET_SIZE (1000)
 
@@ -32,6 +32,13 @@ extern "C" {
 
 static void on_vp8_packet(video::EncoderVP8* enc, const vpx_codec_cx_pkt* pkt, int64_t pts);
 static void on_rtp_packet(rtp::PacketVP8* pkt, void* user);
+
+struct test_srtp {
+  srtp_policy_t policy;
+  srtp_t session;
+};
+
+test_srtp* validate_srtp = NULL;
 
 #endif
 
@@ -93,7 +100,9 @@ int main() {
     exit(1);
   }
 
+  uint64_t pts;
   uint64_t now = uv_hrtime();
+  uint64_t time_started = now;
   uint64_t frame_delay = (1.0 / FRAMERATE) * 1000llu * 1000llu * 1000llu;
   uint64_t frame_timeout = now + frame_delay;
 
@@ -105,12 +114,13 @@ int main() {
 #if USE_SEND
     now = uv_hrtime();
     if (now > frame_timeout) {                  
+      pts = (uv_hrtime() - time_started) / (1000llu * 1000llu);
       frame_timeout = now + frame_delay;
       video_generator_update(&gen);
       encoder.encode(gen.y, gen.strides[0],
                      gen.u, gen.strides[1],
                      gen.v, gen.strides[2], 
-                     gen.frame);
+                     pts);
     }
 #endif
   }
@@ -123,6 +133,25 @@ static void on_rtp_data(ice::Stream* stream,
                         ice::CandidatePair* pair, 
                         uint8_t* data, uint32_t nbytes, void* user) 
 {
+
+#if 0
+  /* TEST: send video dat back! */
+  for (size_t i = 0; i < video_stream->pairs.size(); ++i) {
+    ice::CandidatePair* pair = video_stream->pairs[i];
+
+    if (pair->srtp_reader.is_initialized) {
+      int len = nbytes;
+      err_status_t err = srtp_protect(pair->srtp_out.session, data, &len);
+      if (err != err_status_ok) {
+        printf("on_rtp_packet - error: cannot protect the given srtp packet: %d\n", err);
+      }
+      else {
+        pair->local->conn.sendTo(pair->remote->ip, pair->remote->port, data, len);
+      }
+    }
+  }
+#endif
+
   static uint64_t first_ts = 0;
   int r;
   printf("on_rtp_data - vebose: received RTP data, %u bytes.\n", nbytes);
@@ -138,9 +167,10 @@ static void on_rtp_data(ice::Stream* stream,
     first_ts = pkt.timestamp;
   }
 
+#if 0
   if (agg->addPacket(&pkt) == 1) {
     r = ivf->write(agg->buffer, agg->nbytes, ivf->nframes);
-    if (ivf->nframes >= 1250) {
+    if (ivf->nframes >= 2250) {
       ivf->close();
       printf("ready storing frames.\n");
       exit(1);
@@ -150,6 +180,7 @@ static void on_rtp_data(ice::Stream* stream,
       exit(1);
     }
   }
+#endif
   
 }
 
@@ -160,26 +191,104 @@ static void on_vp8_packet(video::EncoderVP8* enc, const vpx_codec_cx_pkt* pkt, i
 }
 
 static void on_rtp_packet(rtp::PacketVP8* pkt, void* user) {
-  printf("on_rtp_packet - verbose: got RTP packet.\n");
+
+  printf("\n\n===========================================\n");
+  rtp::PacketVP8 test_pkt;
+  if (rtp::rtp_vp8_decode(pkt->payload, pkt->nbytes, &test_pkt) < 0) {
+    printf("on_rtp_packet: error: cannot decode incoming VP8 RTP packet.\n");
+    exit(1);
+  }
+  printf("on_rtp_packet: verbose: decoded seqnum: %u\n", test_pkt.sequence_number);
+
+
+  printf("on_rtp_packet - verbose: got RTP packet, and we have %lu pairs.\n", video_stream->pairs.size());
+  int ok = 0;
+  int len = pkt->nbytes;
+  ice::CandidatePair* pair = NULL;
   for (size_t i = 0; i < video_stream->pairs.size(); ++i) {
-    ice::CandidatePair* pair = video_stream->pairs[i];
-    printf("on_rtp_packet - verbose: pair, local ip: %s, remote ip: %s\n",
+    pair = video_stream->pairs[i];
+    printf("on_rtp_packet - verbose: pair, local ip: %s:%d, remote ip: %s:%d\n",
            pair->local->ip.c_str(),
-           pair->remote->ip.c_str()
+           pair->local->port,
+           pair->remote->ip.c_str(),
+           pair->remote->port
            );
 
-    //pair->srtp_reader.session/polic;
-    if (pair->srtp_reader.is_initialized) {
-      int nbytes = pkt->nbytes;
-      err_status_t err = srtp_protect(pair->srtp_reader.session, pkt->payload, &nbytes);
-      if (err != err_status_ok) {
-        printf("on_rtp_packet - error: cannot protect the given srtp packet.\n");
-      }
-      else {
-        pair->local->conn.sendTo(pair->remote->ip, pair->remote->port, pkt->payload, pkt->nbytes);
-      }
+    if (false == pair->srtp_out.is_initialized) {
+      printf(">>>>>>>>> NOT INITIALIZED <<<<<<<<<<<<<\n");
     }
-    //
+    else {
+      printf(">>>>>>>>>>>>>>>> INITIALIZED <<<<<<<<<<<< \n");
+    }
+    if (pair->srtp_reader.is_initialized) {
+      len = pkt->nbytes;
+      err_status_t err = srtp_protect(pair->srtp_out.session, pkt->payload, &len);
+      if (err != err_status_ok) {
+        ok = 0;
+        printf("on_rtp_packet - error: cannot protect the given srtp packet: %d\n", err);
+      }
+
+      ok = 1;
+      printf(">>> SRTP_PROTECT RESULT: %d\n", err);
+      break;
+    }
   }
+
+  if (0 == video_stream->pairs.size()) {
+    return;
+  }
+  //ice::CandidatePair* last_pair = video_stream->pairs[video_stream->pairs.size() -1 ];
+  ice::CandidatePair* last_pair = video_stream->pairs[0];
+  for (size_t i = 0; i < video_stream->pairs.size(); ++i) {
+    ice::CandidatePair* p = video_stream->pairs[i];
+    printf(">> %s:%u <> %s:%u\n", p->local->ip.c_str(), p->local->port, p->remote->ip.c_str(), p->remote->port);
+  }
+
+#if 1
+  if (pair && NULL == validate_srtp && NULL != pair->dtls.remote_key)  {
+
+    validate_srtp = new test_srtp;
+    crypto_policy_set_aes_cm_128_hmac_sha1_80(&validate_srtp->policy.rtp);   /* @todo see SSL_get_selected_srtp_profile() to extract the name */
+    crypto_policy_set_aes_cm_128_hmac_sha1_80(&validate_srtp->policy.rtcp);  /* @todo see SSL_get_selected_srtp_profile() to extract the name */
+
+    validate_srtp->policy.key = new uint8_t[SRTP_READER_MASTER_LEN];         /* @todo - make sure to cleanup somewhere */
+    validate_srtp->policy.ssrc.type = ssrc_any_inbound;    
+    validate_srtp->policy.window_size = 128;                                 /* @todo  http://mxr.mozilla.org/mozilla-central/source/media/webrtc/signaling/src/mediapipeline/SrtpFlow.cpp */
+    validate_srtp->policy.allow_repeat_tx = 0;
+    validate_srtp->policy.next = NULL;
+    memcpy(validate_srtp->policy.key, pair->dtls.local_key, SRTP_READER_MASTER_KEY_LEN);
+    memcpy(validate_srtp->policy.key + SRTP_READER_MASTER_KEY_LEN, pair->dtls.local_salt, SRTP_READER_MASTER_SALT_LEN);
+
+    err_status_t err = srtp_create(&validate_srtp->session, &validate_srtp->policy);
+    if (err != err_status_ok) {
+      printf("on_rtp_packet: error - cannot init validate srtp.\n");
+      exit(1);
+    }
+  }
+#endif   
+
+  if (NULL != validate_srtp && 1 == ok && pair) {
+#if 0
+    for (size_t i = 0; i < video_stream->remote_candidates.size(); ++i) {
+      ice::Candidate* p = video_stream->remote_candidates[i];
+      pair->local->conn.sendTo(p->ip, p->port, pkt->payload, len);
+    }
+#else
+    pair->local->conn.sendTo(last_pair->remote->ip, last_pair->remote->port, pkt->payload, len);
+#endif
+    
+    /*
+    for (size_t i = 1; i < video_stream->remote_candidates.size(); ++i) {
+      ice::Candidate* cand = video_stream->remote_candidates[i];
+      printf("on_rtp_packet: remote %s:%d\n", cand->ip.c_str(), cand->port);
+      printf("on_rtp_packet: protected! len: %d, nbytes: %d\n", len, pkt->nbytes);
+      pair->local->conn.sendTo(cand->ip, cand->port, pkt->payload, len);
+      err_status_t err = srtp_unprotect(validate_srtp->session, pkt->payload, &len);
+      printf("on_rtp_packet: UNPROTECTED! LEN: %d, ERR: %d\n", len, err);
+    }
+    */
+  }
+
+  printf("===========================================\n\n");
 }
 #endif

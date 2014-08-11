@@ -136,7 +136,10 @@ namespace rtc {
       return;
     }
 
-    printf("rtc::ConnectionUDP - verbose: sending the following data (%u bytes).\n", nbytes);
+
+    printf("rtc::ConnectionUDP - verbose: sending the following data (%u bytes) form %s:%u to %s:%u.\n", nbytes, ip.c_str(), port, rip.c_str(), rport);
+
+#if 0
     printf("-----------------------------------");
 
     int c = 0;
@@ -149,7 +152,7 @@ namespace rtc {
       printf("%02X ", data[i]);
     }
     printf("\n-----------------------------------\n");
-
+#endif
 
     /* @todo check nbytes size in ConnectionUDP::send */
     /* @todo we def. don't want to allocate everytime when we need to sentin ConnectionUDP. */

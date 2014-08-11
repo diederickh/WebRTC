@@ -184,9 +184,15 @@ namespace ice {
               exit(1);
             }
 
+            /* @todo - create a srtp_in + srtp_out */
             //if (!pair->srtp_reader.init(pair->dtls.client_key, pair->dtls.client_salt)) {
             if (!pair->srtp_reader.init(pair->dtls.remote_key, pair->dtls.remote_salt)) {
               printf("agent_stream_on_data - error: cannot init the srtp reader.\n");
+              exit(1);
+            }
+
+            if (false == pair->srtp_out.init(pair->dtls.local_key, pair->dtls.local_salt)) {
+              printf("agent_stream_on_data - error: cannot init hte srtp out.\n");
               exit(1);
             }
           }

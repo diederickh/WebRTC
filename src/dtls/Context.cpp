@@ -180,7 +180,8 @@ namespace dtls {
       return false;
     }
 
-    SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE | SSL_OP_NO_TICKET | SSL_OP_SINGLE_ECDH_USE); /* test */
+    /* @todo read up on the SSL_OP*, ssl options */
+    //  SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE | SSL_OP_NO_TICKET | SSL_OP_SINGLE_ECDH_USE); /* test */
     SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF); /* test */
     SSL_CTX_set_mode(ctx, SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_AUTO_RETRY); /* test */
 

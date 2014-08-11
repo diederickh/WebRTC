@@ -32,11 +32,14 @@ namespace video {
     }
 
     /* update config */
+    /* @todo - set correct encoder timebase */
     cfg.rc_target_bitrate = 1500;
     cfg.g_w = settings.width;
     cfg.g_h = settings.height;
-    cfg.g_timebase.num = 1; 
-    cfg.g_timebase.den = 1000;
+    cfg.g_timebase.num = config.fps_num; 
+    cfg.g_timebase.den = config.fps_den;
+    //    cfg.g_timebase.num = 1;
+    //    cfg.g_timebase.den = 1000;
 
     /* @todo - we could use the same timebase as webrtc code: https://gist.github.com/roxlu/ceb1e8c95aff5ba60f45#file-vp8_impl-cc-L189-L190, also the RTP.timestamp should make this when we change it here */
     /* @todo - check the webrtc vp8 codec settings + error resilient flags: https://gist.github.com/roxlu/ceb1e8c95aff5ba60f45#file-vp8_impl-cc-L225-L238 */
@@ -110,6 +113,9 @@ namespace video {
       printf("EncoderVP8 - warning: no on_packet handler set; not encoding.\n");
       return -1;
     }
+
+    /* @todo in EncoderVP8::encode we're forcing a keyframe for every frame! */
+    // flags = VPX_EFLAG_FORCE_KF;
 
     /* encode the packet. */
     err = vpx_codec_encode(&ctx, image, pts, frame_duration, flags, VPX_DL_REALTIME);
