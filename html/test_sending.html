@@ -45,6 +45,12 @@
      }, on_media_ok, on_media_err);
  };
 
+   var on_add_stream = function(evt) {
+     console.log("ADD STREAM", evt);
+     var receive_video = $('#receive_video')[0];
+     receive_video.src = URL.createObjectURL(evt.stream);
+   }
+
  $(document).ready(function() {
      start_button = $('#start_sending')[0];
      stop_button = $('#stop_sending')[0];
@@ -74,7 +80,8 @@
              "m=video 1 RTP/SAVPF 100\r\n" +
              "c=IN IP4 " + $('#server_ip').val() + "\r\n" +
              "a=mid:video\r\n" +
-             "a=recvonly\r\n" +
+             "a=sendrcv\r\n" +                                               
+//             "a=recvonly\r\n" +
              "a=rtcp-mux\r\n" +
              "a=rtpmap:100 VP8/90000\r\n" +
              "a=ice-ufrag:" + $('#server_ufrag').val() + "\r\n" +
@@ -96,6 +103,7 @@
          if (!peer_conn) {
              peer_conn = new RTCPeerConnection(null, options);
              peer_conn.addStream(local_stream);
+             peer_conn.onaddstream = on_add_stream;
          }
 
          peer_conn.createOffer(function(offer) {
@@ -165,8 +173,11 @@
       <video id="input_video" width="320" height="240"> </video>
     </div>
 
+    <h3>Recieving video</h3>
+    <video id="receive_video" width="320" height="240"> </video>
+
     <h3>Server information</h3>
-    <label for="server_ip">IP</label><input type="text" id="server_ip" placeholder="IP" value="192.168.0.193"></input><br>
+    <label for="server_ip">IP</label><input type="text" id="server_ip" placeholder="IP" value="192.168.0.194"></input><br>
     <label for="server_port">Port</label><input type="text" id="server_port" placeholder="Port" value="59976""></input><br>
     <label for="server_fingerprint">Fingerprint</label><input type="text" id="server_fingerprint" placeholder="Fingerprint" value="sha-256 3C:A8:D2:9B:34:9C:F1:94:F5:FD:AD:61:1D:79:21:4D:75:32:23:BB:ED:2E:85:02:79:C9:80:1D:A8:BB:A9:8A" class="big"></input><br>
     <label for="server_ufrag">ice-ufrag</label><input type="text" id="server_ufrag" placeholder="ice-ufrag"" value="5PN2qmWqBl"></input><br>

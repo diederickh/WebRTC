@@ -10,7 +10,10 @@
   ----
   
   Optimize for low latency:
-      - https://groups.google.com/a/webmproject.org/forum/#!topic/webm-discuss/TNPgd7Tf9jQ
+      - Discussion: https://groups.google.com/a/webmproject.org/forum/#!topic/webm-discuss/TNPgd7Tf9jQ
+      - Error resilient: https://gist.github.com/roxlu/ceb1e8c95aff5ba60f45#file-vp8_impl-cc-L225-L238
+      - VP8 config: https://gist.github.com/roxlu/ceb1e8c95aff5ba60f45#file-vp8_impl-cc-L225-L238
+        
 
  */
 

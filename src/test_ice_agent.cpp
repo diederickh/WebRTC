@@ -5,11 +5,35 @@
 #include <rtp/PacketVP8.h>
 #include <video/AggregatorVP8.h>
 #include <video/WriterIVF.h>
+#include <uv.h>
+
+#define USE_SEND 1        /* Enable sending of VP8 data */
 
 video::AggregatorVP8* aggregator;
 ice::Agent* agent;
 ice::Stream* video_stream;
 video::WriterIVF* ivf;
+
+#if USE_SEND
+extern "C" {
+#  include <video_generator.h>
+}
+#  include <video/EncoderSettings.h>
+#  include <video/EncoderVP8.h>
+#  include <rtp/WriterVP8.h>
+#  define WIDTH 640
+#  define HEIGHT 480
+#  define FRAMERATE 25
+#  define RTP_PACKET_SIZE (1000)
+
+   video::EncoderSettings settings;
+   video::EncoderVP8 encoder;
+   rtp::WriterVP8 rtp_writer;
+
+static void on_vp8_packet(video::EncoderVP8* enc, const vpx_codec_cx_pkt* pkt, int64_t pts);
+static void on_rtp_packet(rtp::PacketVP8* pkt, void* user);
+
+#endif
 
 static void on_rtp_data(ice::Stream* stream, ice::CandidatePair* pair, uint8_t* data, uint32_t nbytes, void* user);
 
@@ -25,7 +49,7 @@ int main() {
 
   video_stream->on_rtp = on_rtp_data;
   video_stream->user_rtp = aggregator;
-  video_stream->addLocalCandidate(new ice::Candidate("192.168.0.193", 59976));
+  video_stream->addLocalCandidate(new ice::Candidate("192.168.0.194", 59976));
   //video_stream->addLocalCandidate(new ice::Candidate("127.0.0.1", 10001));
 
   /* add the stream to the agent */
@@ -45,9 +69,50 @@ int main() {
   if (!agent->init()) {
     exit(1);
   }
+
+#if USE_SEND
+
+  settings.width = WIDTH;
+  settings.height = HEIGHT;
+  settings.fps_num = 1;
+  settings.fps_den = FRAMERATE;
+
+  /* initialize the encoder. */
+  if (encoder.init(settings) < 0) {
+    printf("main - error: cannot initialize the vp8 encoder.\n");
+    exit(1);
+  }
+
+  encoder.on_packet = on_vp8_packet;
+  rtp_writer.on_packet = on_rtp_packet;
+
+  /* initialize the video generator. */
+  video_generator gen;
+  if (video_generator_init(&gen, WIDTH, HEIGHT, FRAMERATE) < 0) {
+    printf("main - error: cannot initialize the video generator.\n");
+    exit(1);
+  }
+
+  uint64_t now = uv_hrtime();
+  uint64_t frame_delay = (1.0 / FRAMERATE) * 1000llu * 1000llu * 1000llu;
+  uint64_t frame_timeout = now + frame_delay;
+
+#endif
   
   while (true) {
     agent->update();
+
+#if USE_SEND
+    now = uv_hrtime();
+    if (now > frame_timeout) {                  
+      frame_timeout = now + frame_delay;
+      video_generator_update(&gen);
+      encoder.encode(gen.y, gen.strides[0],
+                     gen.u, gen.strides[1],
+                     gen.v, gen.strides[2], 
+                     gen.frame);
+    }
+#endif
   }
   
   return 0;
@@ -87,3 +152,34 @@ static void on_rtp_data(ice::Stream* stream,
   }
   
 }
+
+#if USE_SEND
+static void on_vp8_packet(video::EncoderVP8* enc, const vpx_codec_cx_pkt* pkt, int64_t pts) {
+  printf("on_vp8_packet - verbose: got vp8 packet: %lld\n", pts);
+  rtp_writer.packetize(pkt);
+}
+
+static void on_rtp_packet(rtp::PacketVP8* pkt, void* user) {
+  printf("on_rtp_packet - verbose: got RTP packet.\n");
+  for (size_t i = 0; i < video_stream->pairs.size(); ++i) {
+    ice::CandidatePair* pair = video_stream->pairs[i];
+    printf("on_rtp_packet - verbose: pair, local ip: %s, remote ip: %s\n",
+           pair->local->ip.c_str(),
+           pair->remote->ip.c_str()
+           );
+
+    //pair->srtp_reader.session/polic;
+    if (pair->srtp_reader.is_initialized) {
+      int nbytes = pkt->nbytes;
+      err_status_t err = srtp_protect(pair->srtp_reader.session, pkt->payload, &nbytes);
+      if (err != err_status_ok) {
+        printf("on_rtp_packet - error: cannot protect the given srtp packet.\n");
+      }
+      else {
+        pair->local->conn.sendTo(pair->remote->ip, pair->remote->port, pkt->payload, pkt->nbytes);
+      }
+    }
+    //
+  }
+}
+#endif

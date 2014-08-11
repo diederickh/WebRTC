@@ -29,6 +29,7 @@ namespace rtp {
     srand(time(NULL));
     picture_id = rand();
     seqnum = rand();
+    ssrc = rand();
   }
 
   WriterVP8::~WriterVP8() {
@@ -63,11 +64,15 @@ namespace rtp {
       buffer = tmp;
     }
 
+    /* @todo the rtp.N (non-reference frame), should probably be set using a different flag, check out https://gist.github.com/roxlu/ceb1e8c95aff5ba60f45#file-vp8_impl-cc-L42 */
+       
+
     /* update the given PacketVP8 so it fits the RFC */
     rtp.extension = 1;                                               /* RTP: extension header? -> yes, VP8 */
     rtp.csrc_count = 0;                                              /* RTP: num of csrc identifiers */
     rtp.sequence_number = seqnum;                                    /* RTP: sequence number. */
-    rtp.timestamp = pkt->data.frame.pts * 90;                        /* RTP timestamp: 90hz. */
+    rtp.timestamp = pkt->data.frame.pts * 90;                        /* RTP: timestamp: 90hz. */
+    rtp.ssrc = ssrc;                                                 /* RTP: ssrc */
     rtp.PID = pkt->data.frame.partition_id;                          /* RTP VP8: partition index. */
     rtp.S = 1;                                                       /* RTP VP8: start of first VP8 partition */
     rtp.X = 1;                                                       /* RTP VP8: extended control bits are present. */ 
@@ -75,6 +80,12 @@ namespace rtp {
     rtp.M = 1;                                                       /* RTP VP8: we use 15 bits for the picture_id */
     rtp.PictureID = picture_id;                                      /* RTP VP8: picture id */
     rtp.payload = buffer;
+
+   
+   
+    if (pkt->data.frame.flags & VPX_FRAME_IS_DROPPABLE) {
+      exit(1);
+    }
 
     /* create packets */
     bytes_left = pkt->data.frame.sz;

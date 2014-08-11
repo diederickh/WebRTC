@@ -38,6 +38,9 @@ namespace video {
     cfg.g_timebase.num = 1; 
     cfg.g_timebase.den = 1000;
 
+    /* @todo - we could use the same timebase as webrtc code: https://gist.github.com/roxlu/ceb1e8c95aff5ba60f45#file-vp8_impl-cc-L189-L190, also the RTP.timestamp should make this when we change it here */
+    /* @todo - check the webrtc vp8 codec settings + error resilient flags: https://gist.github.com/roxlu/ceb1e8c95aff5ba60f45#file-vp8_impl-cc-L225-L238 */
+
 #if 0
     cfg.g_pass = VPX_RC_ONE_PASS;
     cfg.g_error_resilient = 1;
