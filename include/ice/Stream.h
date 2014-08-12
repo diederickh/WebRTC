@@ -21,11 +21,6 @@ namespace ice {
                                        uint8_t* data, uint32_t nbytes, void* user);
                                       
 
-
-  enum StreamState {
-    STREAM_STATE_NONE = 0x00,
-  };
-
   class Stream {
   public:
     Stream();
@@ -40,20 +35,18 @@ namespace ice {
     CandidatePair* findPair(std::string rip, uint16_t rport, std::string lip, uint16_t lport);  /* used internally to find a pair on which data flows */
     Candidate* findLocalCandidate(std::string ip, uint16_t port);                               /* find a local candidate for the given local ip and port. */
     Candidate* findRemoteCandidate(std::string ip, uint16_t port);                              /* find a remote candidate for the given remote ip and port. */
+    int sendRTP(uint8_t* data, uint32_t nbytes);                                                /* send unprotected RTP data; we will make sure it's protected. */
 
   public:
-    StreamState state;
-    CandidatePair* rtp_pair;                                                               /* the candidate pair that is selected for the RTP data. */
     std::vector<Candidate*> local_candidates;                                                   /* our local candidates */
     std::vector<Candidate*> remote_candidates;                                                  /* our remote candidates */
     std::vector<CandidatePair*> pairs;                                                          /* the candidate pairs */
     stream_data_callback on_data;                                                               /* the stream data callback; is called whenever one of the transports receives data; the Agent handles incoming data. */
-    stream_media_callback on_rtp;                                                                /* is called whenever there is decoded rtp data; it's up to the user to call this at the right time, e.g. see Agent.cpp */
+    stream_media_callback on_rtp;                                                               /* is called whenever there is decoded rtp data; it's up to the user to call this at the right time, e.g. see Agent.cpp */
     void* user_data;                                                                            /* user data that is passed to the on_data handler. */
     void* user_rtp;                                                                             /* user data that is passed to the on_rtp handler. */
-
-    std::string ice_ufrag;
-    std::string ice_pwd;
+    std::string ice_ufrag;                                                                      /* the ice_ufrag from the sdp */
+    std::string ice_pwd;                                                                        /* the ice-pwd value from the sdp, used when adding the message-integrity element to the responses. */ 
   }; 
 
 } /* namespace ice */

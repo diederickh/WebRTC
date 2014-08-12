@@ -10,9 +10,7 @@ namespace ice {
   /* ------------------------------------------------------------------ */
 
   Stream::Stream() 
-    :state(STREAM_STATE_NONE)
-    ,rtp_pair(NULL)
-    ,on_data(NULL)
+    :on_data(NULL)
     ,user_data(NULL)
     ,on_rtp(NULL)
     ,user_rtp(NULL)
@@ -82,12 +80,6 @@ namespace ice {
   void Stream::setCredentials(std::string ufrag, std::string pwd) {
     ice_ufrag = ufrag;
     ice_pwd = pwd;
-    /* @todo Stream::setCredentials, remove the call to candidates->setCredentials; a stream has ufrag/pwd only! */
-    /* 
-    for (size_t i = 0; i < local_candidates.size(); ++i) {
-      local_candidates[i]->setCredentials(ufrag, pwd);
-    }
-    */
   }
 
   CandidatePair* Stream::findPair(std::string rip, uint16_t rport, std::string lip, uint16_t lport) {
@@ -117,7 +109,6 @@ namespace ice {
   }
 
   CandidatePair* Stream::createPair(std::string rip, uint16_t rport, std::string lip, uint16_t lport) {
-    printf("\n\n\n CREATE PAIR \n\n\n");
     ice::Candidate* remote_cand = NULL;
     ice::Candidate* local_cand = NULL;
     ice::CandidatePair* pair = NULL;
@@ -187,6 +178,31 @@ namespace ice {
     return NULL;
   }
 
+  int Stream::sendRTP(uint8_t* data, uint32_t nbytes) {
+
+    /* validate  */
+    if (!data) { return -1; }
+    if (!nbytes) { return -2; } 
+    if (0 == pairs.size()) {
+      printf("ice::Stream::sendRTP() - error: cannot send because we have not pairs yet.\n");
+      return -3;
+    }
+    
+    CandidatePair* pair = pairs[0];
+    int len = pair->srtp_out.protectRTP(data, nbytes);
+    if (len < 0) {
+      printf("ice::Stream::sendRTP() - verbose: cannot protect the RTP data. Probably the srtp parser is not yet initialized.\n");
+      return -4;
+    }
+
+    for (size_t i = 0; i < pairs.size(); ++i) {
+      pair = pairs[i];
+      pair->local->conn.sendTo(pair->remote->ip, pair->remote->port, data, len);
+    }
+
+    return 0;
+  }
+
   /* ------------------------------------------------------------------ */
 
   /* 
@@ -209,48 +225,7 @@ namespace ice {
     if (stream->on_data) {
       stream->on_data(stream, rip, rport, lip, lport, data, nbytes, stream->user_data);
     }
-
-#if 0
-    printf("stream_on_data - verbose: %s:%u ---> %s:%u\n", rip.c_str(), rport, lip.c_str(), lport);
-
-    Stream* stream = static_cast<Stream*>(user);
-    CandidatePair* pair = stream->findPair(rip, rport, lip, lport);
-
-    if (!pair) {
-
-      Candidate* local_candidate = stream->findLocalCandidate(lip, lport);
-      if (!local_candidate) {
-        printf("stream_on_data - verbose: cannot find a local candidate for: %s:%u\n", lip.c_str(), lport);
-        return;
-      }
-
-      Candidate* remote_candidate = stream->findRemoteCandidate(rip, rport);
-      if (remote_candidate) {
-        printf("stream_on_data - error: we found a remote candidate for which no pair exists; this shouldn't happen!\n");
-        exit(1);
-      }
-
-      /* create the new remote candidate */
-      remote_candidate = new Candidate(rip, rport);
-      stream->addRemoteCandidate(remote_candidate);
-      
-      /* and create the pair to keep track of ice state! */
-      pair = new CandidatePair(local_candidate, remote_candidate);
-      stream->addCandidatePair(pair);
-    }
-
-    if (!pair) {
-      printf("stream_on_data - error: we should have found or created a candidate pair by now!\n");
-      exit(1);
-    }
-
-    if (stream->on_data) {
-      stream->on_data(stream, pair, data, nbytes, stream->user_data);
-    }
-
-#endif
   }
-
 
 } /* namespace ice */
 

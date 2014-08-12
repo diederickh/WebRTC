@@ -92,7 +92,7 @@ namespace srtp {
     if (!in) { return -1; }
     if (!nbytes) { return -2; } 
 
-    if (!is_init) {
+    if (false == is_init) {
       printf("srtp::ParserSRTP::protectRTP() - error: trying to protect data, but we're not initialized.\n");
       return -3;
     }
@@ -119,7 +119,7 @@ namespace srtp {
     if (!in) { return -1; } 
     if (!nbytes) { return -2; } 
 
-    if (!is_init) {
+    if (false == is_init) {
       printf("srtp::ParserSRTP::unprotectRTP() - error: trying to unprotect data, but we're not initialized.\n");
       return -3;
     }

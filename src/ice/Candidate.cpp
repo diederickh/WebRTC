@@ -8,8 +8,7 @@ namespace ice {
   static void ice_candidate_pair_on_dtls_data(uint8_t* data, uint32_t nbytes, void* user);                   /* gets called whenever the dtls connection needs to send some data back to the other party. */  
 
   Candidate::Candidate(std::string ip, uint16_t port)
-    :state(CANDIDATE_STATE_NONE)
-    ,ip(ip)
+    :ip(ip)
     ,port(port)
     ,on_data(NULL)
     ,user(NULL)
@@ -39,23 +38,7 @@ namespace ice {
     conn.on_data = cb;
     conn.user = user;
 
-    state = CANDIDATE_STATE_WAITING;
-
     return true;
-  }
-
-  void Candidate::setCredentials(std::string ufrag, std::string pwd) {
-
-    if (0 == ufrag.size()) {
-      printf("ice::Candidate - warning: the ice_ufrag given to setCredentials is empty.\n");
-    }
-
-    if (0 == pwd.size()) {
-      printf("ice::Candidate - warning: the ice_pwd given to setCredentials is empty.\n");
-    }
-
-    ice_ufrag = ufrag;
-    ice_pwd = pwd;
   }
 
   void Candidate::update() {

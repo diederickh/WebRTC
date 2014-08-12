@@ -4,7 +4,7 @@
   -----
 
   This is an experimental class to keep track of the state of an agent 
-  and it's candidates. 
+  and it's candidates. We only support ICE-LITE atm.
 
   Should be used with a (server) sdp, with a=ice-lite, e.g:
 
@@ -40,25 +40,12 @@
 
 #include <string>
 #include <vector>
-#include <ice/Types.h>
 #include <ice/Stream.h>
 #include <dtls/Context.h>
 #include <stun/Reader.h>
 #include <stun/Writer.h>
 
 namespace ice {
-
-
-  enum AgentState {
-    AGENT_STATE_NONE = 0x0,
-    AGENT_STATE_STARTING,                   
-    AGENT_STATE_CHECKING, 
-    AGENT_STATE_CONNECTED,
-    AGENT_STATE_COMPLETED,
-    AGENT_STATE_FAILED,
-    AGENT_STATE_DISCONNECTED,
-    AGENT_STATE_CLOSED
-  };
 
   class Agent {
   public:

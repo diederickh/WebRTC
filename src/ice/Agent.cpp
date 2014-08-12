@@ -5,7 +5,6 @@ namespace ice {
   /* ------------------------------------------------------------------ */
 
   /* gets called whenever a stream receives data for a candidate pair that needs to be processed. */
-  ///static void agent_stream_on_data(Stream* stream, CandidatePair* pair, uint8_t* data, uint32_t nbytes, void* user);
 
   static void agent_stream_on_data(Stream* stream, 
                                    std::string rip, uint16_t rport,
@@ -208,7 +207,7 @@ namespace ice {
           exit(1);
         }
 
-        if (0 != pair->srtp_out.init(cipher, true, pair->dtls.local_key, pair->dtls.local_salt)) {
+        if (0 != pair->srtp_out.init(cipher, false, pair->dtls.local_key, pair->dtls.local_salt)) {
           printf("Agent::handleStreamData() - erorr: cannot initialize srtp_out.\n");
           exit(1);
         }
@@ -233,8 +232,6 @@ namespace ice {
     }
   }
 
-
-
   /* ------------------------------------------------------------------ */
   static void agent_stream_on_data(Stream* stream, 
                                    std::string rip, uint16_t rport,
@@ -258,89 +255,6 @@ namespace ice {
       agent->handleStreamData(stream, rip, rport, lip, lport, data, nbytes);
     }
   }
-
-
-#if 0
-  static void agent_stream_on_data(Stream* stream, CandidatePair* pair, uint8_t* data, uint32_t nbytes, void* user) {
-    printf("agent_stream_on_data - verbose: received data form a stream.\n");
-
-    int r;
-    stun::Message msg;
-    Agent* agent = static_cast<Agent*>(user);
-
-    r = agent->stun.process(data, nbytes, &msg);
-    if (r == 0) {
-      agent->handleStunMessage(stream, pair, &msg);
-    }
-    else if (r == 1) {
-
-      /* Not SSL context yet, create it! */
-      if (pair->dtls.ssl == NULL) {
-        pair->dtls.ssl = agent->dtls_ctx.createSSL();
-        if (!pair->dtls.ssl) {
-          printf("agent_stream_on_data - error: cannot allocate a new SSL object.\n");
-          exit(1);
-        }
-        if (!pair->dtls.init()) {
-          printf("agent_stream_on_data - error: cannot initialize the dtls parser.\n");
-          exit(1);
-        }
-      }
-      
-      if (!pair->dtls.isHandshakeFinished()) {
-        /* Process the 'non' stun data, which should be DTLS */
-        pair->dtls.process(data, nbytes);
-      }
-      else {
-
-        /* @todo - okay we need to code this whole function way better ^.^ */
-        if (pair->dtls.mode == dtls::DTLS_MODE_SERVER) {
-          if (pair->srtp_reader.is_initialized == false) {
-
-            /* After processing the data, check if the handshake is finished and if so, use the extracted key/salts for SRTP. */
-            if (!pair->dtls.extractKeyingMaterial()) {
-              printf("agent_stream_on_data - error: cannot extract keying material.\n");
-              exit(1);
-            }
-
-            /* @todo - create a srtp_in + srtp_out */
-            //if (!pair->srtp_reader.init(pair->dtls.client_key, pair->dtls.client_salt)) {
-            if (!pair->srtp_reader.init(pair->dtls.remote_key, pair->dtls.remote_salt)) {
-              printf("agent_stream_on_data - error: cannot init the srtp reader.\n");
-              exit(1);
-            }
-
-            if (false == pair->srtp_out.init(pair->dtls.local_key, pair->dtls.local_salt)) {
-              printf("agent_stream_on_data - error: cannot init hte srtp out.\n");
-              exit(1);
-            }
-          }
-        }
-        else {
-          printf("agent_stream_on_data - error: only implmenting the DTLS_MODE_SERVER for now.\n");
-          exit(1);
-        }
-        
-        /* Handshake ready, so here the SRTP reader should be ready as well!. */
-        if (false == pair->srtp_reader.is_initialized) {
-          printf("agent_stream_on_data - error: dtls handshake done, but srtp reader not initialized - not supposed to happen!\n");
-          exit(1);
-        }
-
-        /* Ok, ready to decode some data with libsrtp. */
-        int len = pair->srtp_reader.process(data, nbytes);
-        if (len > 0) {
-          if (stream->on_rtp) {
-            stream->on_rtp(stream, pair, data, len, stream->user_rtp);
-          }
-        } 
-        else {
-          /* @todo we need to handle the srtp decoding error! */
-        }
-      }
-    }
-  }
-#endif
 
 } /* namespace ice */
 
