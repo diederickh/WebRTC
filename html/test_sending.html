@@ -46,7 +46,7 @@
  };
 
    var on_add_stream = function(evt) {
-     console.log("ADD STREAM", evt);
+     console.log("on_add_strean", evt);
      var receive_video = $('#receive_video')[0];
      receive_video.src = URL.createObjectURL(evt.stream);
      receive_video.play();
@@ -95,6 +95,7 @@
              "";
 
          console.info(answer_sdp);
+
          $('#answer_sdp').val(answer_sdp);
 
          var answer = new RTCSessionDescription({

@@ -4,8 +4,10 @@ namespace ice {
 
   /* ------------------------------------------------------------------ */
 
-  /* gets called whenever a stream receives data for a candidate pair that needs to be processed. */
+  /* gets called whenever the dtls connection needs to send some data back to the other party. */  
+  static void agent_on_dtls_data(uint8_t* data, uint32_t nbytes, void* user);                   
 
+  /* gets called whenever a stream receives data for a candidate pair that needs to be processed. */
   static void agent_stream_on_data(Stream* stream, 
                                    std::string rip, uint16_t rport,
                                    std::string lip, uint16_t lport,
@@ -25,7 +27,8 @@ namespace ice {
       delete *it;
       streams.erase(it);
     }
-    
+
+    /* @todo make sure the dtls::Parser is free'd (see stream data handler) */
   }
 
   /* Add a new stream; we take ownership */
@@ -56,6 +59,7 @@ namespace ice {
       Stream* stream = streams[i];
 
       /* @todo - we're going to remove the dtls from candidate; instead CandidatePair gets one. */
+      /*
       for(size_t k = 0; k < stream->local_candidates.size(); ++k) {
         Candidate* cand = stream->local_candidates[k];
         cand->dtls.ssl = dtls_ctx.createSSL();
@@ -64,6 +68,7 @@ namespace ice {
           return false;
         }
       }
+      */
     }
 
     /* and initialize all streams. */
@@ -168,8 +173,95 @@ namespace ice {
       }
     }
 
+    /* TMP - TESTING */
+    Candidate* lcand = pair->local;
+
     /* INITIALIZE DTLS */
     /* --------------- */
+    if (NULL == lcand->dtls.ssl) {
+
+      /* @todo > we need to store OR delete the DTLS parser, Agent takes ownership? */
+
+      /* Allocate our DTLS parser */
+      /*
+      lcand->dtls = new dtls::Parser();
+      if (NULL == lcand->dtls) {
+        printf("Agent::handleStreamData() - error: cannot allocate dtls handler.\n");
+        return;
+      }
+
+      */
+      lcand->dtls.on_data = agent_on_dtls_data;
+      lcand->dtls.user = pair;
+
+      /* Allocate our SSL* object. */
+      lcand->dtls.ssl = dtls_ctx.createSSL();
+      if (!lcand->dtls.ssl) {
+          printf("agent_stream_on_data - error: cannot allocate a new SSL object.\n");
+          exit(1);
+      }
+      if (!lcand->dtls.init()) {
+        printf("agent_stream_on_data - error: cannot initialize the dtls parser.\n");
+        exit(1);
+      }
+      printf("\n\n\n\n++++++++++++++++++++++ CREATED NEW PARSER FOR DTLS +++++++++++++++++++++++\n\n\n\n");
+    }
+
+    dtls::Parser& dtls = lcand->dtls;
+
+    /* SETUP SRTP WHEN DTLS HANDSHAKE IS FINISHED */
+    /* ------------------------------------------ */
+    if (false == lcand->dtls.isHandshakeFinished()) {
+
+      /* Handle data. */
+      dtls.process(data, nbytes);
+
+      /* When DTLS handshake is finished we can setup the SRTP flow */
+      if (true == dtls.isHandshakeFinished()) {
+        printf("HANDSHAKE DONE!\n");
+        if (false == dtls.extractKeyingMaterial()) {
+          printf("Agent::handleStreamData() - error: cannot extract keying material.\n");
+          exit(1);
+        }
+
+        const char* cipher = dtls.getCipherSuite();
+        if (NULL == cipher) {
+          printf("Agent::handleStreamData() - error: cannot get cipher suite.\n");
+          exit(1);
+        }
+
+        if (0 != lcand->srtp_in.init(cipher, true, dtls.remote_key, dtls.remote_salt)) {
+          printf("Agent::handleStreamData() - erorr: cannot initialize srtp_in.\n");
+          exit(1);
+        }
+
+        if (0 != lcand->srtp_out.init(cipher, false, dtls.local_key, dtls.local_salt)) {
+          printf("Agent::handleStreamData() - erorr: cannot initialize srtp_out.\n");
+          exit(1);
+        }
+      }
+    }
+
+    /* HANDLE MEDIA DATA */
+    /* ----------------- */
+
+    /* Ok, ready to decode some data with libsrtp. */
+    /* @todo - distinguish between rtp/rtcp */
+    int len = lcand->srtp_in.unprotectRTP(data, nbytes);
+    if (len > 0) {
+      if (stream->on_rtp) {
+        stream->on_rtp(stream, pair, data, len, stream->user_rtp);
+      }
+    } 
+    else {
+      /* @todo we need to handle the srtp decoding error! */
+    }
+
+    /* TMP - TESTING */
+
+    /* INITIALIZE DTLS */
+    /* --------------- */
+#if 0
     if (false == pair->dtls.isHandshakeFinished()) {
 
       /* This could be DTLS, create context if not exist */
@@ -230,7 +322,9 @@ namespace ice {
         /* @todo we need to handle the srtp decoding error! */
       }
     }
+#endif
   }
+
 
   /* ------------------------------------------------------------------ */
   static void agent_stream_on_data(Stream* stream, 
@@ -255,6 +349,18 @@ namespace ice {
       agent->handleStreamData(stream, rip, rport, lip, lport, data, nbytes);
     }
   }
+
+  static void agent_on_dtls_data(uint8_t* data, uint32_t nbytes, void* user) {
+
+    ice::CandidatePair* pair = static_cast<ice::CandidatePair*>(user);
+
+    if (NULL == pair->local) {
+      printf("agent_on_dtls_data: error - the pair doesn't have a local candidate which isn't supposed to happen!\n");
+      return;
+    }
+
+    pair->local->conn.sendTo(pair->remote->ip, pair->remote->port, data, nbytes);
+  }                   
 
 } /* namespace ice */
 

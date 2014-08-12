@@ -167,10 +167,10 @@ static void on_rtp_data(ice::Stream* stream,
     first_ts = pkt.timestamp;
   }
 
-#if 0
+#if 1
   if (agg->addPacket(&pkt) == 1) {
     r = ivf->write(agg->buffer, agg->nbytes, ivf->nframes);
-    if (ivf->nframes >= 2250) {
+    if (ivf->nframes >= 4250) {
       ivf->close();
       printf("ready storing frames.\n");
       exit(1);

@@ -140,7 +140,7 @@ namespace rtp {
       /* call the callback we have a new RTP packet. */
       on_packet(&rtp, user);
 
-#if 0
+#if 1
       printf("WriterVP8::packtize - verbose: X: %d, N: %d, S: %d, PID: %d, payload_type: %d, SSRC: %u"
              "I: %d, L: %d, T: %d, K: %d, M:%d, PictureID: %u, len: %u, timestamp: %u\n",
              rtp.X, rtp.N, rtp.S, rtp.PID, rtp.payload_type, rtp.ssrc,

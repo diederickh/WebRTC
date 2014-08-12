@@ -189,7 +189,7 @@ namespace ice {
     }
     
     CandidatePair* pair = pairs[0];
-    int len = pair->srtp_out.protectRTP(data, nbytes);
+    int len = pair->local->srtp_out.protectRTP(data, nbytes);
     if (len < 0) {
       printf("ice::Stream::sendRTP() - verbose: cannot protect the RTP data. Probably the srtp parser is not yet initialized.\n");
       return -4;

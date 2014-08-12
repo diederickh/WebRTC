@@ -4,6 +4,7 @@
 #include <vector>
 #include <ice/Candidate.h>
 #include <dtls/Parser.h>
+#include <srtp/ParserSRTP.h>
 
 namespace ice {
 
