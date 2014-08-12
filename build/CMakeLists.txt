@@ -42,8 +42,9 @@ set(lib_sources
   ${sd}/dtls/Context.cpp
   ${sd}/dtls/Parser.cpp
   ${sd}/rtc/Connection.cpp
-  ${sd}/srtp/Reader.cpp
-  ${sd}/srtp/ContextSRTP.cpp
+  ${sd}/srtp/Reader.cpp # @todo remove 
+  ${sd}/srtp/ContextSRTP.cpp # @todo remove
+  ${sd}/srtp/ParserSRTP.cpp
   ${sd}/rtp/ReaderVP8.cpp
   ${sd}/rtp/WriterVP8.cpp
   ${sd}/rtp/PacketVP8.cpp

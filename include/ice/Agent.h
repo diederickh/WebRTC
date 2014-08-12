@@ -68,9 +68,8 @@ namespace ice {
     void update();                                                                         /* This must be called often as it fetches new data from the socket and parses any incoming data */
     void addStream(Stream* stream);                                                        /* Add a new stream, this class takes ownership */
     void setCredentials(std::string ufrag, std::string pwd);                               /* set the credentials (ice-ufrag, ice-pwd) for all streams. */
-
-    /* ICE */
-    void handleStunMessage(Stream* stream, CandidatePair* pair, stun::Message* msg);       /* Handles incoming stun messages for the given stream and candidates. It will make sure the correct action will be taken. */
+    void handleStunMessage(Stream* stream, stun::Message* msg, std::string rip, uint16_t rport, std::string lip, uint16_t lport);       /* Handles incoming stun messages for the given stream and candidates. It will make sure the correct action will be taken. */
+    void handleStreamData(Stream* stream, std::string rip, uint16_t rport, std::string lip, uint16_t lport, uint8_t* data, uint32_t nbytes) ;
 
   public:
     std::vector<Stream*> streams;         

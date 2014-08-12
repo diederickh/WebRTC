@@ -125,6 +125,7 @@ namespace stun {
           Priority* prio = new Priority();
           prio->value = readU32();
           attr = (Attribute*) prio;
+          printf("stun::Reader - verbose: priority: %u\n", prio->value);
           break;
         } 
 

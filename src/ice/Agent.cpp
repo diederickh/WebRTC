@@ -5,7 +5,12 @@ namespace ice {
   /* ------------------------------------------------------------------ */
 
   /* gets called whenever a stream receives data for a candidate pair that needs to be processed. */
-  static void agent_stream_on_data(Stream* stream, CandidatePair* pair, uint8_t* data, uint32_t nbytes, void* user);
+  ///static void agent_stream_on_data(Stream* stream, CandidatePair* pair, uint8_t* data, uint32_t nbytes, void* user);
+
+  static void agent_stream_on_data(Stream* stream, 
+                                   std::string rip, uint16_t rport,
+                                   std::string lip, uint16_t lport,
+                                   uint8_t* data, uint32_t nbytes, void* user);
 
   /* ------------------------------------------------------------------ */
 
@@ -91,26 +96,14 @@ namespace ice {
     }
   }
 
-  void Agent::handleStunMessage(Stream* stream, CandidatePair* pair, stun::Message* msg) {
+  void Agent::handleStunMessage(Stream* stream, stun::Message* msg, 
+                                std::string rip, uint16_t rport, 
+                                std::string lip, uint16_t lport) 
+  {
 
     /* Make sure we receive valid input. */
     if (!stream) {
       printf("ice::Agent::handleStunMesage() - error: cannot handle stun message, invalid stream given.\n");
-      return;
-    }
-
-    if (!pair) {
-      printf("ice::Agent::handleStunMesage() - error: cannot handle stun message, invald pair given.\n");
-      return;
-    }
-
-    if (!pair->local) {
-      printf("ice::Agent::handleStunMesage() - error: the pair doesn't have a local candidate, which isn't allowed.\n");
-      return;
-    }
-
-    if (!pair->remote) {
-      printf("ice::Agent::handleStunMesage() - error: the pair doesn't have a remote candidate, which isn't allowed.\n");
       return;
     }
 
@@ -125,23 +118,149 @@ namespace ice {
       return;
     }
 
+    /* Find the local candidate that we use to transfer data from. */
+    ice::Candidate* local_cand = stream->findLocalCandidate(lip, lport);
+    if (!local_cand) {
+      printf("ice::Agent::handleStunMessage() - error: cannot find the local candidate for %s:%u\n", lip.c_str(), lport);
+      return;
+    }
+
+    /* Create the pair when the controlling agent tell us to use this candidate. */
+    if (msg->hasAttribute(stun::STUN_ATTR_USE_CANDIDATE)) {
+      CandidatePair* pair = stream->findPair(rip, rport, lip, lport);
+      if (NULL == pair) {
+        pair = stream->createPair(rip, rport, lip, lport);
+      }
+    }
+    
     /* Construct our STUN Binding-Success-Response */
     stun::Message response(stun::STUN_BINDING_RESPONSE);
     response.copyTransactionID(msg);
-    response.addAttribute(new stun::XorMappedAddress(pair->remote->ip, pair->remote->port));
+    response.addAttribute(new stun::XorMappedAddress(rip, rport));
     response.addAttribute(new stun::MessageIntegrity());
     response.addAttribute(new stun::Fingerprint());
 
     /* Write + send the message. */
     stun::Writer writer;
-    writer.writeMessage(&response, pair->local->ice_pwd);
-    pair->local->conn.sendTo(pair->remote->ip, pair->remote->port,
-                             &writer.buffer[0], writer.buffer.size());
-
+    writer.writeMessage(&response, stream->ice_pwd);
+    local_cand->conn.sendTo(rip, rport, &writer.buffer[0], writer.buffer.size());
   }
 
-  /* ------------------------------------------------------------------ */
+  void Agent::handleStreamData(Stream* stream, 
+                               std::string rip, uint16_t rport, 
+                               std::string lip, uint16_t lport, 
+                               uint8_t* data, uint32_t nbytes)
+  {
 
+#if !defined(NDEBUG)
+    if (NULL == on_rtp) {
+      printf("Agent::handleStreamData() - error: no on_rtp() callback set; makes no sense to do anything with the data.\n");
+      return;
+    }
+#endif
+
+    /* Find a candidate pair. */
+    CandidatePair* pair = stream->findPair(rip, rport, lip, lport);
+    if (NULL == pair) {
+      pair = stream->createPair(rip, rport, lip, lport);
+      if (NULL == pair) {
+        printf("Agent::handleStreamData() - error: cannot allocate a candidate pair!\n");
+        return;
+      }
+    }
+
+    /* INITIALIZE DTLS */
+    /* --------------- */
+    if (false == pair->dtls.isHandshakeFinished()) {
+
+      /* This could be DTLS, create context if not exist */
+      if (NULL == pair->dtls.ssl) {
+        pair->dtls.ssl = dtls_ctx.createSSL();
+        if (!pair->dtls.ssl) {
+          printf("agent_stream_on_data - error: cannot allocate a new SSL object.\n");
+          exit(1);
+        }
+        if (!pair->dtls.init()) {
+          printf("agent_stream_on_data - error: cannot initialize the dtls parser.\n");
+          exit(1);
+        }
+      }
+
+      /* Handle data. */
+      pair->dtls.process(data, nbytes);
+
+      /* When DTLS handshake is finished we can setup the SRTP flow */
+      if (true == pair->dtls.isHandshakeFinished()) {
+
+        if (false == pair->dtls.extractKeyingMaterial()) {
+          printf("Agent::handleStreamData() - error: cannot extract keying material.\n");
+          exit(1);
+        }
+
+        const char* cipher = pair->dtls.getCipherSuite();
+        if (NULL == cipher) {
+          printf("Agent::handleStreamData() - error: cannot get cipher suite.\n");
+          exit(1);
+        }
+
+        if (0 != pair->srtp_in.init(cipher, true, pair->dtls.remote_key, pair->dtls.remote_salt)) {
+          printf("Agent::handleStreamData() - erorr: cannot initialize srtp_in.\n");
+          exit(1);
+        }
+
+        if (0 != pair->srtp_out.init(cipher, true, pair->dtls.local_key, pair->dtls.local_salt)) {
+          printf("Agent::handleStreamData() - erorr: cannot initialize srtp_out.\n");
+          exit(1);
+        }
+      }
+    }
+    else {
+
+      /* HANDLE MEDIA DATA */
+      /* ----------------- */
+
+      /* Ok, ready to decode some data with libsrtp. */
+      /* @todo - distinguish between rtp/rtcp */
+      int len = pair->srtp_in.unprotectRTP(data, nbytes);
+      if (len > 0) {
+        if (stream->on_rtp) {
+          stream->on_rtp(stream, pair, data, len, stream->user_rtp);
+        }
+      } 
+      else {
+        /* @todo we need to handle the srtp decoding error! */
+      }
+    }
+  }
+
+
+
+  /* ------------------------------------------------------------------ */
+  static void agent_stream_on_data(Stream* stream, 
+                                   std::string rip, uint16_t rport,
+                                   std::string lip, uint16_t lport,
+                                   uint8_t* data, uint32_t nbytes, void* user) 
+  {
+    int r;
+    stun::Message msg;
+    ice::Agent* agent = static_cast<Agent*>(user);
+    
+    printf("agent_stream_on_data: verbose - received %u bytes from %s:%u on %s:%u\n", nbytes, rip.c_str(), rport, lip.c_str(), lport);
+
+    /* process the incoming message, check if it's STUN, DTLS or RTP data */
+    r = agent->stun.process(data, nbytes, &msg);
+    if (r == 0) {
+      /* STUN */
+      agent->handleStunMessage(stream, &msg, rip, rport, lip, lport);
+    }
+    else if (r == 1) {
+      /* RTP, RTCP or DTLS */
+      agent->handleStreamData(stream, rip, rport, lip, lport, data, nbytes);
+    }
+  }
+
+
+#if 0
   static void agent_stream_on_data(Stream* stream, CandidatePair* pair, uint8_t* data, uint32_t nbytes, void* user) {
     printf("agent_stream_on_data - verbose: received data form a stream.\n");
 
@@ -221,6 +340,7 @@ namespace ice {
       }
     }
   }
+#endif
 
 } /* namespace ice */
 

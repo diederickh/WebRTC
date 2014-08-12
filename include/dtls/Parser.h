@@ -54,6 +54,7 @@ namespace dtls {
     void process(uint8_t* data, uint32_t nbytes);               /* process some encrypted data */
     bool isHandshakeFinished();
     bool extractKeyingMaterial();                               /* only when the SSL handshake has finsihed, this will extract the keying material that is used by srtp. */
+    const char* getCipherSuite();                               /* returns the selected cipher suite, of < 0 on error. we set the given suite parameter to the one that we use. */
 
   private:
     void checkOutputBuffer();                                   /* checks is there is data in our out_bio and that we need to send something to the other party. */

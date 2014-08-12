@@ -192,6 +192,21 @@ namespace dtls {
     return true;
   }
 
+  const char* Parser::getCipherSuite() {
+    printf("dtls::Parser() - verbose: get cipher suite.\n");
+    
+    if (!ssl) { return NULL; } 
+    if (!isHandshakeFinished()) { return NULL; } 
+    
+    SRTP_PROTECTION_PROFILE *p = SSL_get_selected_srtp_profile(ssl);
+    if (NULL == p) {
+      printf("dtls::Parser::getCipherSuite() - cannot extract srtp profile.\n");
+      return NULL;
+    }
+
+    return p->name;
+  }
+
   void Parser::checkOutputBuffer() {
 
     int to_read = 0; 

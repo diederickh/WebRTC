@@ -7,7 +7,7 @@
 #include <video/WriterIVF.h>
 #include <uv.h>
 
-#define USE_SEND 1         /* Enable sending of VP8 data */
+#define USE_SEND 0         /* Enable sending of VP8 data */
 
 video::AggregatorVP8* aggregator;
 ice::Agent* agent;

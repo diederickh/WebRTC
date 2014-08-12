@@ -11,6 +11,7 @@ namespace ice {
 
   Stream::Stream() 
     :state(STREAM_STATE_NONE)
+    ,rtp_pair(NULL)
     ,on_data(NULL)
     ,user_data(NULL)
     ,on_rtp(NULL)
@@ -79,9 +80,14 @@ namespace ice {
   }
 
   void Stream::setCredentials(std::string ufrag, std::string pwd) {
+    ice_ufrag = ufrag;
+    ice_pwd = pwd;
+    /* @todo Stream::setCredentials, remove the call to candidates->setCredentials; a stream has ufrag/pwd only! */
+    /* 
     for (size_t i = 0; i < local_candidates.size(); ++i) {
       local_candidates[i]->setCredentials(ufrag, pwd);
     }
+    */
   }
 
   CandidatePair* Stream::findPair(std::string rip, uint16_t rport, std::string lip, uint16_t lport) {
@@ -108,6 +114,49 @@ namespace ice {
     }
 
     return NULL;
+  }
+
+  CandidatePair* Stream::createPair(std::string rip, uint16_t rport, std::string lip, uint16_t lport) {
+    printf("\n\n\n CREATE PAIR \n\n\n");
+    ice::Candidate* remote_cand = NULL;
+    ice::Candidate* local_cand = NULL;
+    ice::CandidatePair* pair = NULL;
+
+    /* We shouldn't find this pair */
+    pair = findPair(rip, rport, lip, lport);
+    if (NULL != pair) {
+      printf("ice::Stream::createPair() - pair already exists. %s:%u <-> %s:%u\n", lip.c_str(), lport, rip.c_str(), rport);
+      return pair;
+    }
+
+    local_cand = findLocalCandidate(lip, lport);
+    if (NULL == local_cand) {
+      printf("ice::Stream::createPair() - error: cannot find a local candidate; we can only create candidate when the local one has been added alread. (e.g. by the calling app.).\n");
+      return NULL;
+    }
+
+    /* Create a new remote candidate or use the one that already exists. */
+    remote_cand = findRemoteCandidate(rip, rport);
+    if (NULL == remote_cand) {
+      remote_cand = new Candidate(rip, rport);
+      if (NULL == remote_cand) {
+        printf("ice::Stream::createPair() - error: cannot allocate an ice::Candidate. \n");
+        return NULL;
+      }
+    }
+
+    /* Create a new pair of these local and remote candidates. */
+    pair = new ice::CandidatePair(local_cand, remote_cand);
+    if (NULL == pair) {
+      printf("ice::Agent::handleStunMessage() - error: cannot allocate an ice::CandidatePair.\n");
+      return NULL;
+    }
+      
+    /* Make sure the stream keeps track of the allocate candidate/pairs. These will be freed by the stream. */
+    addRemoteCandidate(remote_cand);
+    addCandidatePair(pair);
+
+    return pair;
   }
 
   Candidate* Stream::findLocalCandidate(std::string ip, uint16_t port) {
@@ -155,6 +204,13 @@ namespace ice {
                              std::string lip, uint16_t lport, 
                              uint8_t* data, uint32_t nbytes, void* user) 
   {
+
+    Stream* stream = static_cast<Stream*>(user);
+    if (stream->on_data) {
+      stream->on_data(stream, rip, rport, lip, lport, data, nbytes, stream->user_data);
+    }
+
+#if 0
     printf("stream_on_data - verbose: %s:%u ---> %s:%u\n", rip.c_str(), rport, lip.c_str(), lport);
 
     Stream* stream = static_cast<Stream*>(user);
@@ -191,7 +247,10 @@ namespace ice {
     if (stream->on_data) {
       stream->on_data(stream, pair, data, nbytes, stream->user_data);
     }
+
+#endif
   }
+
 
 } /* namespace ice */
 

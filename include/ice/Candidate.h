@@ -9,10 +9,12 @@
 #include <dtls/Context.h>
 #include <srtp/Reader.h>
 #include <srtp/ContextSRTP.h>
+#include <srtp/ParserSRTP.h>
 
 namespace ice {
 
   /* from: http://tools.ietf.org/html/rfc5245#section-5.7.4 */
+  /* @todo -> we're not actually using candidate states; maybe remove them? */
   enum CandidateState {
     CANDIDATE_STATE_NONE = 0x00,
     CANDIDATE_STATE_WAITING, 
@@ -35,8 +37,14 @@ namespace ice {
     CandidateState state;                                             /* candidate state; used by ice */
     std::string ip;                                                   /* the ip to which we can send data */ 
     uint16_t port;                                                    /* the port to which we can send data */
+    uint8_t component_id;
+
+    /* @todo - Candidate > a stream has a ice_frag/ice_pwd, not a candidate, remove these */
+    /* -------------------------- TO BE REMOVED ------------------- */
     std::string ice_ufrag;                                            /* ice-ufrag value */
     std::string ice_pwd;                                              /* ice-pwd value, used to construct message-integrity attributes */ 
+    /* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ */
+
     rtc::ConnectionUDP conn;                                          /* the (udp for now) connection on which we receive data; later we can decouple this if necessary. */
     stun::Reader stun;                                                /* the stun reader; used to parse incoming stun messages */
     dtls::Parser dtls;                                                /* used to handle the dtls handshake */
@@ -57,8 +65,10 @@ namespace ice {
     Candidate* local;                                                 /* local candidate; which has a socket (ConnectionUDP) */
     Candidate* remote;                                                /* the remote party from which we receive data and send data towards. */
     dtls::Parser dtls;                                                /* each candidate pair has it's own dtls context; each pair has it's own 'flow' of data */
-    srtp::Reader srtp_reader;                                         /* used to decode incoming SRTP packets. */
-    srtp::ContextSRTP srtp_out;
+    srtp::ParserSRTP srtp_out; 
+    srtp::ParserSRTP srtp_in;
+    //    srtp::Reader srtp_reader;                                         /* used to decode incoming SRTP packets. */
+    //    srtp::ContextSRTP srtp_out;
   };
 
 } /* namespace ice */
