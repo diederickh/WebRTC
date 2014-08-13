@@ -57,6 +57,7 @@ namespace ice {
     void setCredentials(std::string ufrag, std::string pwd);                               /* set the credentials (ice-ufrag, ice-pwd) for all streams. */
     void handleStunMessage(Stream* stream, stun::Message* msg, std::string rip, uint16_t rport, std::string lip, uint16_t lport);       /* Handles incoming stun messages for the given stream and candidates. It will make sure the correct action will be taken. */
     void handleStreamData(Stream* stream, std::string rip, uint16_t rport, std::string lip, uint16_t lport, uint8_t* data, uint32_t nbytes) ;
+    std::string getSDP();                                                                  /* Experimental: based on the added streams / candidates, this will return an SDP that can be shared the other agents. */
 
   public:
     std::vector<Stream*> streams;         

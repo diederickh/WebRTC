@@ -40,7 +40,7 @@ namespace dtls {
     ~Context();
     bool init();                                                             /* generates a certificate + private key on the fly */               
     bool init(std::string certfile, std::string keyfile);                    /* loads the given certificate + private key */
-    bool createFingerprint(std::string& result);                             /* returns the fingerprint for the certificate */
+    bool getFingerprint(std::string& result);                                /* returns the fingerprint for the certificate */
     SSL* createSSL();                                                        /* creates a new SSL* object with support with DTLS, giving ownership to the caller. */
 
   private:

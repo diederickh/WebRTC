@@ -9,151 +9,175 @@
   <script src="https://apprtc.appspot.com/js/adapter.js"></script>
   <script src="signaling.js"></script>
   <script>
-
- var start_button = null;
- var stop_button = null;
- var video_input = null; /* the video element that we use to display the input. */
- var sdp_answer = null; /* the SDP that's the answers to our offer */
- var peer_conn = null;
- var peer_candidates = null;
- var local_stream = null;
-
- var options = {
-     optional: [{
-         DtlsSrtpKeyAgreement: true
-     }]
- };
-
- /* tries to open the webcam stream */
- var open_webcam = function(ready) {
-
-     var on_media_ok = function(stream) {
-         attachMediaStream(input_video, stream);
-         input_video.play();
-         local_stream = stream;
-         if (ready) {
-             ready(stream);
-         }
-     };
-
-     var on_media_err = function(err) {
-         console.error("Error: cannot get user media: ", err);
-     };
-
-     getUserMedia({
-       "audio": false,
-       "video": true
-     }, on_media_ok, on_media_err);
- };
-
-   var on_add_stream = function(evt) {
-     console.log("on_add_strean", evt);
-     var receive_video = $('#receive_video')[0];
-     receive_video.src = URL.createObjectURL(evt.stream);
-     receive_video.play();
-   }
-
- $(document).ready(function() {
-     start_button = $('#start_sending')[0];
-     stop_button = $('#stop_sending')[0];
-     video_input = $('#input_video')[0];
-     start_button.disabled = false;
-     stop_button.disabled = true;
-
-     $('#stop_sending').click(function() {
-         if (!start_button.disabled) {
-             return;
-         }
-         peer_conn.close();
-         peer_conn = null;
-         start_button.disabled = false;
-         stop_button.disabled = true;
-
-     });
-
-     $('#start_sending').click(function() {
-
-         var answer_sdp = "" +
-             "v=0\r\n" +
-             "o=- 5372151867866539221 2 IN IP4 127.0.0.1\r\n" +
-             "s=-\r\n" +
-             "t=0 0\r\n" +
-             "a=ice-lite\r\n" +
-             "m=video 1 RTP/SAVPF 100\r\n" +
-             "c=IN IP4 " + $('#server_ip').val() + "\r\n" +
-             "a=mid:video\r\n" +
-             "a=sendrecv\r\n" +                                               
-///             "a=recvonly\r\n" +
-             "a=rtcp-mux\r\n" +
-             "a=rtpmap:100 VP8/90000\r\n" +
-             "a=ice-ufrag:" + $('#server_ufrag').val() + "\r\n" +
-             "a=ice-pwd:" + $('#server_pwd').val() + "\r\n" +
-             "a=candidate:4252876256 1 udp 2130706431 " + $('#server_ip').val() + " " + $('#server_port').val() + " typ host\r\n" +
-//             "a=candidate:4252876256 1 udp 2122260223 " + $('#server_ip').val() + " " + $('#server_port').val() + " typ host\r\n" +
-//            "a=candidate:4252876256 2 udp 2130706430 " + $('#server_ip').val() + " " + $('#server_port').val() + " typ host\r\n" +
-             "a=fingerprint:" + $('#server_fingerprint').val() + "\r\n" +
-             "a=setup:passive\r\n" +
-             "";
-
-         console.info(answer_sdp);
-
-         $('#answer_sdp').val(answer_sdp);
-
-         var answer = new RTCSessionDescription({
-             type: "answer",
-             sdp: answer_sdp
-         });
-
-         if (!peer_conn) {
-             peer_conn = new RTCPeerConnection(null, options);
-             peer_conn.addStream(local_stream);
-             peer_conn.onaddstream = on_add_stream;
-         }
-
-         peer_conn.createOffer(function(offer) {
-                 peer_conn.setLocalDescription(offer, success_handler, error_handler);
-                 $('#offer_sdp').text(offer.sdp);
-                 peer_conn.setRemoteDescription(
-                     answer,
-                     function(e) {
-                         start_button.disabled = true;
-                         stop_button.disabled = false;
-                     },
-                     function(e) {
-                         console.error("Cannot set remote description");
-                         console.error(e);
-                         start_button.disabled = false;
-                     }
-                 );
-
-             },
-             error_handler, {
-                 mandatory: {
-                     OfferToReceiveAudio: false,
-                     OfferToReceiveVideo: true
-                 }
-             }
-         );
-
-     });
-
-     open_webcam(function() {
-         console.info("Opened webcam");
-     });
- });
-
- var error_handler = function(e) {
-     if (e) {
-         console.log("Error: ", e);
-     } else {
-         console.log("Error");
-     }
- }
- var success_handler = function(e) {
-     if (e) {
-         console.log("OK: ", e);
-     }
- }
+       var start_button = null;
+       var stop_button = null;
+       var video_input = null; /* the video element that we use to display the input. */
+       var sdp_answer = null; /* the SDP that's the answers to our offer */
+       var peer_conn = null;
+       var peer_candidates = null;
+       var local_stream = null;
+       var custom_info_toggle = null;
+       var custom_info_con = null; /* the div that contains the custom server info fields */
+       var server_sdp = null; /* we use the signaling server and when use don't want to use custom server info we use this value */
+       var sig = new Signaling(); /* basic wrapper around our signaling API. */
+       
+       var options = {
+           optional: [{
+               DtlsSrtpKeyAgreement: true
+           }]
+       };
+       
+       /* tries to open the webcam stream */
+       var open_webcam = function(ready) {
+       
+           var on_media_ok = function(stream) {
+               attachMediaStream(input_video, stream);
+               input_video.play();
+               local_stream = stream;
+               if (ready) {
+                   ready(stream);
+               }
+           };
+       
+           var on_media_err = function(err) {
+               console.error("Error: cannot get user media: ", err);
+           };
+       
+           getUserMedia({
+               "audio": false,
+               "video": true
+           }, on_media_ok, on_media_err);
+       };
+       
+       var on_add_stream = function(evt) {
+           console.log("on_add_strean", evt);
+           var receive_video = $('#receive_video')[0];
+           receive_video.src = URL.createObjectURL(evt.stream);
+           receive_video.play();
+       }
+       
+       $(document).ready(function() {
+           start_button = $('#start_sending')[0];
+           stop_button = $('#stop_sending')[0];
+           video_input = $('#input_video')[0];
+       
+           /* custom sdp or use signaling */
+           custom_info_toggle = $('#use_custom_server_info');
+           custom_info_con = $('#custom_server_info');
+           custom_info_con.hide();
+           custom_info_toggle.change(function(ev) {
+               custom_info_con.toggle();
+           });
+       
+       
+           start_button.disabled = false;
+           stop_button.disabled = true;
+       
+           $('#stop_sending').click(function() {
+               if (!start_button.disabled) {
+                   return;
+               }
+               peer_conn.close();
+               peer_conn = null;
+               start_button.disabled = false;
+               stop_button.disabled = true;
+       
+           });
+       
+           /* fetches the SDP from our server for the party room. */
+           var get_server_sdp = function() {
+               sig.onjoin = function(room, sdp) { server_sdp = sdp;  }
+               sig.onconnect = function() { sig.join("party");  }
+               sig.connect("ws://127.0.0.1:9001");
+           };
+           get_server_sdp();
+       
+           $('#start_sending').click(function() {
+       
+               /* do we want to use a custom SDP or the one from the signaling server. */
+               var answer_sdp = null;
+               if (false == custom_info_toggle.prop('checked')) {
+                   answer_sdp = server_sdp;
+               } else {
+                   answer_sdp = "" +
+                       "v=0\r\n" +
+                       "o=- 5372151867866539221 2 IN IP4 127.0.0.1\r\n" +
+                       "s=-\r\n" +
+                       "t=0 0\r\n" +
+                       "a=ice-lite\r\n" +
+                       "m=video 1 RTP/SAVPF 100\r\n" +
+                       "c=IN IP4 " + $('#server_ip').val() + "\r\n" +
+                       "a=mid:video\r\n" +
+                       "a=sendrecv\r\n" +
+                       "a=rtcp-mux\r\n" +
+                       "a=rtpmap:100 VP8/90000\r\n" +
+                       "a=ice-ufrag:" + $('#server_ufrag').val() + "\r\n" +
+                       "a=ice-pwd:" + $('#server_pwd').val() + "\r\n" +
+                       "a=candidate:4252876256 1 udp 2130706431 " + $('#server_ip').val() + " " + $('#server_port').val() + " typ host\r\n" +
+                       "a=fingerprint:" + $('#server_fingerprint').val() + "\r\n" +
+                       "a=setup:passive\r\n" +
+                       "";
+               }
+       
+               console.info(answer_sdp);
+       
+               $('#answer_sdp').val(answer_sdp);
+       
+               var answer = new RTCSessionDescription({
+                   type: "answer",
+                   sdp: answer_sdp
+               });
+       
+               if (!peer_conn) {
+                   peer_conn = new RTCPeerConnection(null, options);
+                   peer_conn.addStream(local_stream);
+                   peer_conn.onaddstream = on_add_stream;
+               }
+       
+               peer_conn.createOffer(function(offer) {
+                       peer_conn.setLocalDescription(offer, success_handler, error_handler);
+                       $('#offer_sdp').text(offer.sdp);
+                       peer_conn.setRemoteDescription(
+                           answer,
+                           function(e) {
+                               start_button.disabled = true;
+                               stop_button.disabled = false;
+                           },
+                           function(e) {
+                               console.error("Cannot set remote description");
+                               console.error(e);
+                               start_button.disabled = false;
+                           }
+                       );
+       
+                   },
+                   error_handler, {
+                       mandatory: {
+                           OfferToReceiveAudio: false,
+                           OfferToReceiveVideo: true
+                       }
+                   }
+               );
+       
+           });
+       
+           open_webcam(function() {
+               console.info("Opened webcam");
+           });
+       });
+       
+       var error_handler = function(e) {
+           if (e) {
+               console.log("Error: ", e);
+           } else {
+               console.log("Error");
+           }
+       }
+       var success_handler = function(e) {
+           if (e) {
+               console.log("OK: ", e);
+           }
+       }
   </script>
 
 </head>
@@ -166,28 +190,36 @@
       can use e.g. Wireshark to capture the video stream, or look at the logs of the <strong>test_ice_agent</strong>
       application.
     </p>
+
     <ol>
       <li>Open a console into this directory.</li>
-      <li>Python2 type: "python -m SimpleHTTPServer 8080"</li>
-      <li>Python3 type: "python -m http.server 8080"</li>
+      <li>Python-2 type: "python -m SimpleHTTPServer 8080"</li>
+      <li>Python-3 type: "python -m http.server 8080"</li>
       <li>Open: http://localhost:8080/test_sending.html</li>
     </ol>
 
     <h3>Video input</h3>
-    <div id="video_input_container">
+    <div class="video_container">
       <video id="input_video" width="320" height="240"> </video>
     </div>
 
     <h3>Recieving video</h3>
-    <video id="receive_video" width="320" height="240"> </video>
+    <div class="video_container">
+      <video id="receive_video" width="320" height="240"> </video>
+    </div>
 
     <h3>Server information</h3>
-    <label for="server_ip">IP</label><input type="text" id="server_ip" placeholder="IP" value="127.0.0.1"></input><br>
-    <label for="server_port">Port</label><input type="text" id="server_port" placeholder="Port" value="59976""></input><br>
-    <label for="server_fingerprint">Fingerprint</label><input type="text" id="server_fingerprint" placeholder="Fingerprint" value="sha-256 3C:A8:D2:9B:34:9C:F1:94:F5:FD:AD:61:1D:79:21:4D:75:32:23:BB:ED:2E:85:02:79:C9:80:1D:A8:BB:A9:8A" class="big"></input><br>
-    <label for="server_ufrag">ice-ufrag</label><input type="text" id="server_ufrag" placeholder="ice-ufrag"" value="5PN2qmWqBl"></input><br>
-    <label for="server_pwd">ice-pwd</label><input type="text" id="server_pwd" placeholder="ice-pwd"" value="Q9wQj99nsQzldVI5ZuGXbEWRK5RhRXdC" class="big"></input><br>
+    <div class="form_row">
+      <input type="checkbox" name="use_custom_server_info" id="use_custom_server_info" value="y" /><label for="use_custom_server_info">Use custom server info</label>
+    </div>
 
+    <div id="custom_server_info" class="form">
+      <label for="server_ip">IP</label><input type="text" id="server_ip" placeholder="IP" value="127.0.0.1"></input><br>
+      <label for="server_port">Port</label><input type="text" id="server_port" placeholder="Port" value="59976""></input><br>
+      <label for="server_fingerprint">Fingerprint</label><input type="text" id="server_fingerprint" placeholder="Fingerprint" value="sha-256 3C:A8:D2:9B:34:9C:F1:94:F5:FD:AD:61:1D:79:21:4D:75:32:23:BB:ED:2E:85:02:79:C9:80:1D:A8:BB:A9:8A" class="big"></input><br>
+      <label for="server_ufrag">ice-ufrag</label><input type="text" id="server_ufrag" placeholder="ice-ufrag"" value="5PN2qmWqBl"></input><br>
+      <label for="server_pwd">ice-pwd</label><input type="text" id="server_pwd" placeholder="ice-pwd"" value="Q9wQj99nsQzldVI5ZuGXbEWRK5RhRXdC" class="big"></input><br>
+    </div>
     <button id="start_sending"">Start</button>
     <button id="stop_sending"">Stop</button>
 

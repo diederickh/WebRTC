@@ -114,11 +114,11 @@ namespace sig {
     if (NULL == conn) { return ; } 
     if (conn->content_len < 5) { return ; } 
 
-
     /* extract the name of the room. */
     std::string data(conn->content + 5, conn->content_len - 5);
     std::stringstream ss(data);
     std::string room_name;
+    std::string response;
     ss >> room_name;
 
     if (0 == room_name.size()) { 
@@ -132,7 +132,9 @@ namespace sig {
       return;
     }
 
-    mg_websocket_write(conn, 1, room->sdp.c_str(), room->sdp.size());
+    response = "sdp " +room_name +" " +room->sdp;
+
+    mg_websocket_write(conn, WEBSOCKET_OPCODE_TEXT, response.c_str(), response.size());
   }
 
   /* -------------------------------------------------------------- */
@@ -151,7 +153,8 @@ namespace sig {
           s->handleJoin(conn);
         }
 
-        return conn->content_len == 4 && !memcmp(conn->content, "exit", 4) ? MG_FALSE : MG_TRUE;
+        //return conn->content_len == 4 && !memcmp(conn->content, "exit", 4) ? MG_FALSE : MG_TRUE;
+        return MG_TRUE;
       }
     } 
     else if (MG_AUTH == ev) {

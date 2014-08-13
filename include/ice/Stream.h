@@ -6,25 +6,31 @@
 #include <dtls/Parser.h>
 #include <srtp/ParserSRTP.h>
 
+/* flags, used to control the way the stream works */
+#define STREAM_FLAG_NONE         0x0000
+#define STREAM_FLAG_VP8          0x0001
+#define STREAM_FLAG_RTCP_MUX     0x0002
+#define STREAM_FLAG_SENDRECV     0x0004
+#define STREAM_FLAG_RECVONLY     0x0008
+
 namespace ice {
 
   class Stream;
 
-  /* gets called whenever a cadidate pair receives data from the socket. */
-  //typedef void(*stream_data_callback)(Stream* stream, CandidatePair* pair, uint8_t* data, uint32_t nbytes, void* user);
-
+  /* gets called when a stream received data, for which we haven't found a candidate pair yet. */
   typedef void(*stream_data_callback)(Stream* stream, 
                                       std::string rip, uint16_t rport, 
                                       std::string lip, uint16_t lport,
                                       uint8_t* data, uint32_t nbytes, void* user);
                                       
+  /* gets called when we have MEDIA data from a valid candidate (RTP, DTLS, RTCP), e.g. similar to stream_data_callback, only we have a valid candidate pair now. */
   typedef void(*stream_media_callback)(Stream* stream, CandidatePair* pair, 
                                        uint8_t* data, uint32_t nbytes, void* user);
                                       
 
   class Stream {
   public:
-    Stream();
+    Stream(uint32_t flags = STREAM_FLAG_NONE);
     ~Stream();
     bool init();                                                                                /* initialize, must be called once after all local candidates have been added */
     void update();                                                                              /* must be called often, which flush any pending buffers */
@@ -48,6 +54,7 @@ namespace ice {
     void* user_rtp;                                                                             /* user data that is passed to the on_rtp handler. */
     std::string ice_ufrag;                                                                      /* the ice_ufrag from the sdp */
     std::string ice_pwd;                                                                        /* the ice-pwd value from the sdp, used when adding the message-integrity element to the responses. */ 
+    uint32_t flags;                                                                             /* bitflags, defines the featues of the stream; e.g. is it VP8, does it use RTCP-MUX, etc.. */
   }; 
 
 } /* namespace ice */

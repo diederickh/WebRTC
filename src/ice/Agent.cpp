@@ -1,3 +1,7 @@
+#include <stdlib.h>
+#include <time.h>
+#include <sstream>
+#include <uv.h>
 #include <ice/Agent.h>
 
 namespace ice {
@@ -18,6 +22,7 @@ namespace ice {
   Agent::Agent() 
     :is_lite(true)
   {
+    srand(time(NULL));
   }
 
   Agent::~Agent() {
@@ -52,23 +57,6 @@ namespace ice {
     if (!dtls_ctx.init("./server-cert.pem", "./server-key.pem")) {
       printf("ice::Agent - error: cannot initialize the dtls context.\n");
       return false;
-    }
-
-    /* set the parser.ssl for each of the stream candidates, @todo there must be a better API for this. */
-    for(size_t i = 0; i < streams.size(); ++i) {
-      Stream* stream = streams[i];
-
-      /* @todo - we're going to remove the dtls from candidate; instead CandidatePair gets one. */
-      /*
-      for(size_t k = 0; k < stream->local_candidates.size(); ++k) {
-        Candidate* cand = stream->local_candidates[k];
-        cand->dtls.ssl = dtls_ctx.createSSL();
-        if (!cand->dtls.ssl) {
-          printf("ice::Agent - error: cannot create the SSL* for the candidate.\n");
-          return false;
-        }
-      }
-      */
     }
 
     /* and initialize all streams. */
@@ -173,24 +161,11 @@ namespace ice {
       }
     }
 
-    /* TMP - TESTING */
     Candidate* lcand = pair->local;
 
     /* INITIALIZE DTLS */
     /* --------------- */
     if (NULL == lcand->dtls.ssl) {
-
-      /* @todo > we need to store OR delete the DTLS parser, Agent takes ownership? */
-
-      /* Allocate our DTLS parser */
-      /*
-      lcand->dtls = new dtls::Parser();
-      if (NULL == lcand->dtls) {
-        printf("Agent::handleStreamData() - error: cannot allocate dtls handler.\n");
-        return;
-      }
-
-      */
       lcand->dtls.on_data = agent_on_dtls_data;
       lcand->dtls.user = pair;
 
@@ -204,8 +179,6 @@ namespace ice {
         printf("agent_stream_on_data - error: cannot initialize the dtls parser.\n");
         exit(1);
       }
-      printf("\n\n\n\n++++++++++++++++++++++ CREATED NEW PARSER FOR DTLS +++++++++++++++++++++++\n\n\n\n");
-
     }
 
     dtls::Parser& dtls = lcand->dtls;
@@ -219,7 +192,6 @@ namespace ice {
 
       /* When DTLS handshake is finished we can setup the SRTP flow */
       if (true == dtls.isHandshakeFinished()) {
-        printf("HANDSHAKE DONE!\n");
         if (false == dtls.extractKeyingMaterial()) {
           printf("Agent::handleStreamData() - error: cannot extract keying material.\n");
           exit(1);
@@ -257,75 +229,71 @@ namespace ice {
     else {
       /* @todo we need to handle the srtp decoding error! */
     }
-
-    /* TMP - TESTING */
-
-    /* INITIALIZE DTLS */
-    /* --------------- */
-#if 0
-    if (false == pair->dtls.isHandshakeFinished()) {
-
-      /* This could be DTLS, create context if not exist */
-      if (NULL == pair->dtls.ssl) {
-        pair->dtls.ssl = dtls_ctx.createSSL();
-        if (!pair->dtls.ssl) {
-          printf("agent_stream_on_data - error: cannot allocate a new SSL object.\n");
-          exit(1);
-        }
-        if (!pair->dtls.init()) {
-          printf("agent_stream_on_data - error: cannot initialize the dtls parser.\n");
-          exit(1);
-        }
-      }
-
-      /* Handle data. */
-      pair->dtls.process(data, nbytes);
-
-      /* When DTLS handshake is finished we can setup the SRTP flow */
-      if (true == pair->dtls.isHandshakeFinished()) {
-
-        if (false == pair->dtls.extractKeyingMaterial()) {
-          printf("Agent::handleStreamData() - error: cannot extract keying material.\n");
-          exit(1);
-        }
-
-        const char* cipher = pair->dtls.getCipherSuite();
-        if (NULL == cipher) {
-          printf("Agent::handleStreamData() - error: cannot get cipher suite.\n");
-          exit(1);
-        }
-
-        if (0 != pair->srtp_in.init(cipher, true, pair->dtls.remote_key, pair->dtls.remote_salt)) {
-          printf("Agent::handleStreamData() - erorr: cannot initialize srtp_in.\n");
-          exit(1);
-        }
-
-        if (0 != pair->srtp_out.init(cipher, false, pair->dtls.local_key, pair->dtls.local_salt)) {
-          printf("Agent::handleStreamData() - erorr: cannot initialize srtp_out.\n");
-          exit(1);
-        }
-      }
-    }
-    else {
-
-      /* HANDLE MEDIA DATA */
-      /* ----------------- */
-
-      /* Ok, ready to decode some data with libsrtp. */
-      /* @todo - distinguish between rtp/rtcp */
-      int len = pair->srtp_in.unprotectRTP(data, nbytes);
-      if (len > 0) {
-        if (stream->on_rtp) {
-          stream->on_rtp(stream, pair, data, len, stream->user_rtp);
-        }
-      } 
-      else {
-        /* @todo we need to handle the srtp decoding error! */
-      }
-    }
-#endif
   }
 
+
+  /* Experimantal API: returns the SDP */
+  std::string Agent::getSDP() {
+    std::string fingerprint;
+    std::string sdp;
+    std::stringstream ss;
+    
+    /* validate */
+    if (0 == streams.size()) {
+      printf("ice::Agent - error: cannot create the SDP because you haven't added a stream yet.\n");
+      return sdp;
+    }
+
+    if (false == dtls_ctx.getFingerprint(fingerprint)) {
+      printf("ice::Agent - error:cannot create the SDP, the DTLS context hasn't been initialized yet. Did you call init()?\n");
+      return sdp;
+    }
+
+    /* session part */
+    ss << "v=0\r\n"
+       << "o=- " << uv_hrtime() << rand() << " 1 IN IP4 127.0.0.1\r\n"
+       << "s=roxlu-webrtc\r\n"
+       << "t=0 0\r\n"
+       << "a=ice-lite\r\n";
+        
+    /* streams */
+    for (size_t i = 0; i < streams.size(); ++i) {
+      Stream* stream = streams[i];
+
+      if ((stream->flags & STREAM_FLAG_VP8) == STREAM_FLAG_VP8) {
+        ss << "m=video 1 RTP/SAVPF 100\r\n"
+           << "c=IN IP4 127.0.0.1\r\n"
+           << "a=rtpmap:100 VP8/90000\r\n";
+      }
+
+      if ((stream->flags & STREAM_FLAG_RTCP_MUX) == STREAM_FLAG_RTCP_MUX) {
+        ss << "a=rtcp-mux\r\n";
+      }
+
+      if ((stream->flags & STREAM_FLAG_SENDRECV) == STREAM_FLAG_SENDRECV) {
+        ss << "a=sendrecv\r\n";
+      }
+      else if ((stream->flags & STREAM_FLAG_RECVONLY) == STREAM_FLAG_RECVONLY) {
+        ss << "a=recvonly\r\rn";
+      }
+      
+      ss << "a=setup:passive\r\n";
+      ss << "a=ice-ufrag:" << stream->ice_ufrag << "\r\n";
+      ss << "a=ice-pwd:" << stream->ice_pwd << "\r\n";
+      ss << "a=fingerprint:sha-256 " << fingerprint << "\r\n";
+      
+      for (size_t k = 0; k < stream->local_candidates.size(); ++k) {
+        /* @todo - do we need two candidates when using rtcp-mux ? */
+        Candidate* cand = stream->local_candidates[k];
+        uint64_t foundation = uv_hrtime();
+        ss << "a=candidate:" << foundation << " 1 udp 2130706431 " << cand->ip << " " << cand->port << " typ host\r\n";
+        ss << "a=candidate:" << foundation << " 2 udp 2130706431 " << cand->ip << " " << cand->port << " typ host\r\n";
+      }
+    }
+
+    sdp = ss.str();
+    return sdp;
+  }
 
   /* ------------------------------------------------------------------ */
   static void agent_stream_on_data(Stream* stream, 

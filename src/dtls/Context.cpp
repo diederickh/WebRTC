@@ -244,14 +244,21 @@ namespace dtls {
   }
 
 
-  bool Context::createFingerprint(std::string& result) {
+  bool Context::getFingerprint(std::string& result) {
+
+    /* validate */
+    if (NULL == cert) {
+      printf("dtls::Context::getFingerprint() - error: cannot get fingerprint because we're not initialized.\n");
+      return false;
+    }
+
     uint8_t fingerprint[8192];
     char fingerprint_string[8192];
     int r, i;
     int pos = 0;
     uint32_t len = sizeof(fingerprint);
     uint32_t buflen = sizeof(fingerprint_string);
- 
+
     /* Init out buffers to zero */
     memset(fingerprint, 0x00, sizeof(fingerprint));
     memset(fingerprint_string, 0x00, sizeof(fingerprint_string));

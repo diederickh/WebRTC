@@ -1,3 +1,4 @@
+
 * { 
     font-family: Arial, sans-serif;
     font-family: 'Roboto', sans-serif;
@@ -5,7 +6,7 @@
 }
 
 body {
-    background-color: smoke;
+    background-color: whitesmoke;
 }
 
 button {
@@ -63,6 +64,9 @@ h3 {
 
 label {
     display: inline-block;
+}
+
+.form label {
     width: 100px;
 }
 
@@ -105,7 +109,11 @@ textarea {
     right:0;
 }
 
-#video_input_container video {
+.video_container video {
     margin: 0 auto;
     display: block;
+}
+
+.form_row {
+    margin-bottom: 10px;
 }

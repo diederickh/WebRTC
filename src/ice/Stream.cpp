@@ -9,11 +9,12 @@ namespace ice {
 
   /* ------------------------------------------------------------------ */
 
-  Stream::Stream() 
+  Stream::Stream(uint32_t flags) 
     :on_data(NULL)
     ,user_data(NULL)
     ,on_rtp(NULL)
     ,user_rtp(NULL)
+    ,flags(flags)
   {
 
   }

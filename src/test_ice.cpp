@@ -82,7 +82,7 @@ int main() {
       printf("Cannot init the dtls parser.\n");
       exit(1);
     }
-    if (!dtls_ctx.createFingerprint(fingerprint)) {
+    if (!dtls_ctx.getFingerprint(fingerprint)) {
       printf("Error: cannot create dtls/fingerprint sdp attribute.\n");
       exit(1);
     }

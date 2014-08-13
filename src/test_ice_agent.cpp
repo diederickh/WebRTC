@@ -6,14 +6,18 @@
 #include <rtp/PacketVP8.h>
 #include <video/AggregatorVP8.h>
 #include <video/WriterIVF.h>
+#include <signaling/Signaling.h>
 #include <uv.h>
 
-#define USE_SEND 0         /* Enable sending of VP8 data */
+#define USE_SEND 1                 /* Enable sending of VP8 data */
+#define USE_RECORDING 2            /* Records received video into .ivf file that you can concert to webm using e.g. avconv */
+#define RECORDING_MAX_FRAMES 4000  /* Once we've recorded this amount of frames we exit the application */
 
 video::AggregatorVP8* aggregator;
 ice::Agent* agent;
 ice::Stream* video_stream;
 video::WriterIVF* ivf;
+sig::Signaling sigserv;
 
 #if USE_SEND
 extern "C" {
@@ -27,19 +31,12 @@ extern "C" {
 #  define FRAMERATE 25
 #  define RTP_PACKET_SIZE (1000)
 
-   video::EncoderSettings settings;
-   video::EncoderVP8 encoder;
-   rtp::WriterVP8 rtp_writer;
+video::EncoderSettings settings;
+video::EncoderVP8 encoder;
+rtp::WriterVP8 rtp_writer;
 
 static void on_vp8_packet(video::EncoderVP8* enc, const vpx_codec_cx_pkt* pkt, int64_t pts);
 static void on_rtp_packet(rtp::PacketVP8* pkt, void* user);
-
-struct test_srtp {
-  srtp_policy_t policy;
-  srtp_t session;
-};
-
-test_srtp* validate_srtp = NULL;
 
 #endif
 
@@ -55,20 +52,17 @@ int main() {
   aggregator = new video::AggregatorVP8();
   ivf = new video::WriterIVF();
   agent = new ice::Agent();
-  video_stream = new ice::Stream();
+  video_stream = new ice::Stream(STREAM_FLAG_VP8 | STREAM_FLAG_RTCP_MUX | STREAM_FLAG_SENDRECV);
 
   video_stream->on_rtp = on_rtp_data;
   video_stream->user_rtp = aggregator;
   video_stream->addLocalCandidate(new ice::Candidate("127.0.0.1", 59976));
-  //video_stream->addLocalCandidate(new ice::Candidate("127.0.0.1", 10001));
 
   /* add the stream to the agent */
   agent->addStream(video_stream);
 
   /* set the ice-pwd that is used in the MessageIntegrity attribute of the STUN messages */
-  // agent->setCredentials("", "Q9wQj99nsQzldVI5ZuGXbEWRK5RhRXdC");
-  // agent->setCredentials("", "75C96DDDFC38D194FEDF75986CF962A2D56F3B65F1F7");
-  agent->setCredentials("", "Q9wQj99nsQzldVI5ZuGXbEWRK5RhRXdC");
+  agent->setCredentials("5PN2qmWqBl", "Q9wQj99nsQzldVI5ZuGXbEWRK5RhRXdC");
 
   if (ivf->open("test.ivf", 320, 240, 1, 25) < 0) {
     printf("Error: cannot open output ivf file.\n");
@@ -79,9 +73,32 @@ int main() {
   if (!agent->init()) {
     exit(1);
   }
+  
+  /* setup signaling server */
+  /* -------------------------------------------------- */
+
+  sig::SignalingSettings sigserv_settings;
+  sigserv_settings.port = "9001";
+
+  if (0 != sigserv.init(sigserv_settings)) {
+    printf("main - error: cannot init signaling server.\n");
+    exit(1);
+  }
+
+  std::string sdp = agent->getSDP();
+  if (0 != sigserv.addRoom(new sig::Room("party", sdp))) {
+    printf("main - error: cannot add the room.\n");
+    exit(1);
+  }
+  if (0 != sigserv.start()) {
+    printf("main - error: cannot star signaling server.\n");
+    exit(1);
+  }
+  /* -------------------------------------------------- */
 
 #if USE_SEND
 
+  /* Setup our video encoder that uses libvideogenerator to stream some test video */
   settings.width = WIDTH;
   settings.height = HEIGHT;
   settings.fps_num = 1;
@@ -109,7 +126,7 @@ int main() {
   uint64_t frame_delay = (1.0 / FRAMERATE) * 1000llu * 1000llu * 1000llu;
   uint64_t frame_timeout = now + frame_delay;
 
-#endif
+#endif /* USE_SEND */
   
   while (true) {
     agent->update();
@@ -125,7 +142,7 @@ int main() {
                      gen.v, gen.strides[2], 
                      pts);
     }
-#endif
+#endif /* USE_SEND */
   }
   
   return 0;
@@ -137,45 +154,22 @@ static void on_rtp_data(ice::Stream* stream,
                         uint8_t* data, uint32_t nbytes, void* user) 
 {
 
-#if 0
-  /* TEST: send video dat back! */
-  for (size_t i = 0; i < video_stream->pairs.size(); ++i) {
-    ice::CandidatePair* pair = video_stream->pairs[i];
-
-    if (pair->srtp_reader.is_initialized) {
-      int len = nbytes;
-      err_status_t err = srtp_protect(pair->srtp_out.session, data, &len);
-      if (err != err_status_ok) {
-        printf("on_rtp_packet - error: cannot protect the given srtp packet: %d\n", err);
-      }
-      else {
-        pair->local->conn.sendTo(pair->remote->ip, pair->remote->port, data, len);
-      }
-    }
-  }
-#endif
-
-  static uint64_t first_ts = 0;
-  int r;
   printf("on_rtp_data - vebose: received RTP data, %u bytes.\n", nbytes);
+
   video::AggregatorVP8* agg = static_cast<video::AggregatorVP8*>(user);
-  
+
   rtp::PacketVP8 pkt;
   if (rtp::rtp_vp8_decode(data, nbytes, &pkt) < 0) {
     printf("on_rtp_data - error: cannot decode vp8 rtp data.\n");
     return;
   }
 
-  if (0 == first_ts) {
-    first_ts = pkt.timestamp;
-  }
-
-#if 1
+#if USE_RECORDING
   if (agg->addPacket(&pkt) == 1) {
     r = ivf->write(agg->buffer, agg->nbytes, ivf->nframes);
-    if (ivf->nframes >= 4250) {
+    if (ivf->nframes >= RECORDING_MAX_FRAMES) {
       ivf->close();
-      printf("ready storing frames.\n");
+      printf("on_rtp_data - ready storing frames.\n");
       exit(1);
     }
     if (r < 0) {

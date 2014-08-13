@@ -4,6 +4,21 @@
 
    Connects to the signaling server, tries to find the room on the signaling server and
    receives the SDP for this room. 
+
+
+   <example>
+
+      sig.onjoin = function(room, sdp) {
+         console.log(room, sdp);
+      }
+
+      sig.onconnect = function() {
+          sig.join("party");
+      }
+
+      sig.connect("ws://127.0.0.1:9001");
+
+   </example>
    
 */
 var Signaling = function() {
@@ -21,7 +36,7 @@ var Signaling = function() {
 
     this.conn.onopen = function(ev) {
       me.is_connected = true
-      
+
       if (me.onconnect) {
         me.onconnect();
       }
@@ -36,9 +51,13 @@ var Signaling = function() {
     }
 
     this.conn.onmessage = function(ev) {
+
       var el = ev.data.split(' ');
       if (null != me.onjoin && el[0] == "sdp") {
-        me.onjoin(ev.data.substring(4, ev.data.length));
+        me.onjoin(el[1], el.slice(2, el.length).join(" ") );
+      }
+      else {
+        console.warn("Signaling - unhandled message.");
       }
     }
   }
