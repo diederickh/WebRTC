@@ -6,6 +6,17 @@ if [ ! -d build.release ] ; then
     mkdir build.release
 fi
 
+if [ "$(uname)" == "Darwin" ] ; then 
+    if [ ! -d ${d}/../extern/mac-clang-x86_64 ] ; then
+        ./build_mac_dependencies.sh
+        cd build.release
+    fi
+else
+    if [ ! -d ${d}/../extern/linux-gcc-x86_x64 ] ; then
+        ./build_linux_dependencies.sh
+    fi
+fi
+
 cd build.release
 cmake -DCMAKE_BUILD_TYPE=Release ../ 
 cmake --build . --target install

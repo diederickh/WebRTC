@@ -69,6 +69,41 @@ if [ ! -d ${sd}/yasm ] ; then
     mv yasm-1.3.0 yasm
 fi
 
+# Download mongoose (signaling)
+if [ ! -d ${sd}/mongoose ] ; then 
+    cd ${sd}
+    git clone https://github.com/cesanta/mongoose.git mongoose
+fi    
+  
+if [ ! -f ${bd}/src/mongoose.c ] ; then
+    cp ${sd}/mongoose/mongoose.c ${bd}/src/
+    cp ${sd}/mongoose/mongoose.h ${bd}/include/
+fi
+
+
+# Download net_skeleton (signaling)
+if [ ! -d ${sd}/net_skeleton ] ; then 
+    cd ${sd}
+    git clone https://github.com/cesanta/net_skeleton.git net_skeleton
+fi
+
+if [ ! -f ${bd}/src/net_skeleton.c ] ; then
+    cp ${sd}/net_skeleton/net_skeleton.c ${bd}/src/
+    cp ${sd}/net_skeleton/net_skeleton.h ${bd}/include/
+fi
+
+
+# Download ssl_wrapper (signaling)
+if [ ! -d ${sd}/ssl_wrapper ] ; then 
+    cd ${sd}
+    git clone https://github.com/cesanta/ssl_wrapper.git ssl_wrapper
+fi
+
+if [ ! -f ${bd}/src/ssl_wrapper.c ] ; then
+    cp ${sd}/ssl_wrapper/ssl_wrapper.c ${bd}/src/
+    cp ${sd}/ssl_wrapper/ssl_wrapper.h ${bd}/include/
+fi
+
 # ----------------------------------------------------------------------- #
 #                C O M P I L E   D E P E N D E N C I E S 
 # ----------------------------------------------------------------------- #
@@ -124,8 +159,10 @@ if [ ! -f ${bd}/lib/libvpx.a ] ; then
 fi
 
 # Compile libvideogenerator
-cd ${sd}/libvideogenerator/build
-cmake -DCMAKE_INSTALL_PREFIX=${bd}
-cmake --build . --target install
+if [ ! -f ${bd}/lib/libvideogenerator.a ] ; then 
+    cd ${sd}/libvideogenerator/build
+    cmake -DCMAKE_INSTALL_PREFIX=${bd}
+    cmake --build . --target install
+fi
 
 

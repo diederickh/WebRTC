@@ -112,6 +112,7 @@ textarea {
 .video_container video {
     margin: 0 auto;
     display: block;
+    background-color: #ccc;
 }
 
 .form_row {

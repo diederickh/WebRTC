@@ -165,6 +165,7 @@ static void on_rtp_data(ice::Stream* stream,
   }
 
 #if USE_RECORDING
+  int r;
   if (agg->addPacket(&pkt) == 1) {
     r = ivf->write(agg->buffer, agg->nbytes, ivf->nframes);
     if (ivf->nframes >= RECORDING_MAX_FRAMES) {
