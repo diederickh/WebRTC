@@ -27,3 +27,5 @@ fi
 ./test_ice_agent
 #./test_extract_keying_info_for_srtp
 #./test_video_encoder
+#./test_mongoose
+#./test_signaling

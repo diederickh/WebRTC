@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <ice/Agent.h>
 #include <ice/Candidate.h>
+#include <ice/Utils.h>
 #include <rtp/ReaderVP8.h>
 #include <rtp/PacketVP8.h>
 #include <video/AggregatorVP8.h>
@@ -47,6 +48,8 @@ static void on_rtp_data(ice::Stream* stream, ice::CandidatePair* pair, uint8_t* 
 int main() {
 
   printf("\n\ntest_ice_agent\n\n");
+
+  std::vector<std::string> interfaces = ice::get_interface_addresses();
 
   /* create our stream with the candidates */
   aggregator = new video::AggregatorVP8();

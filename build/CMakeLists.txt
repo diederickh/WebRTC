@@ -15,6 +15,9 @@ endif()
 
 #add_definitions("-fsanitize-address-zero-base-shadow")
 #add_definitions("-fsanitize=address")
+
+add_definitions(-DUSE_WEBSOCKET)
+
 if (UNIX AND NOT APPLE)
   add_definitions("-std=c++0x")
 endif()
@@ -53,6 +56,14 @@ set(lib_sources
   ${sd}/video/WriterIVF.cpp
   ${sd}/video/EncoderVP8.cpp
   ${sd}/video/EncoderSettings.cpp
+
+  # signaling
+  ${sd}/signaling/Signaling.cpp
+  ${sd}/signaling/Room.cpp
+  ${sd}/signaling/SignalingSettings.cpp
+  ${extern_source_dir}/mongoose.c
+  ${extern_source_dir}/net_skeleton.c
+  ${extern_source_dir}/ssl_wrapper.c
 )
 
 set(lib_headers
@@ -140,6 +151,16 @@ target_link_libraries("${test}${debug}" ${lib} ${app_libs})
 install(TARGETS "${test}${debug}" DESTINATION bin)
 
 set(test test_video_encoder)
+add_executable("${test}${debug}" ${sd}/${test}.cpp)
+target_link_libraries("${test}${debug}" ${lib} ${app_libs})
+install(TARGETS "${test}${debug}" DESTINATION bin)
+
+set(test test_mongoose)
+add_executable("${test}${debug}" ${sd}/${test}.cpp)
+target_link_libraries("${test}${debug}" ${lib} ${app_libs})
+install(TARGETS "${test}${debug}" DESTINATION bin)
+
+set(test test_signaling)
 add_executable("${test}${debug}" ${sd}/${test}.cpp)
 target_link_libraries("${test}${debug}" ${lib} ${app_libs})
 install(TARGETS "${test}${debug}" DESTINATION bin)

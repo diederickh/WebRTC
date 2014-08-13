@@ -45,7 +45,10 @@ set(install_dir ${CMAKE_CURRENT_LIST_DIR}/../install/${tri_triplet})
 set(extern_source_dir ${CMAKE_CURRENT_LIST_DIR}/../extern/${tri_triplet}/src/)
 set(extern_lib_dir ${CMAKE_CURRENT_LIST_DIR}/../extern/${tri_triplet}/lib/)
 set(extern_include_dir ${CMAKE_CURRENT_LIST_DIR}/../extern/${tri_triplet}/include)
-set(CMAKE_INSTALL_PREFIX ${install_dir})
+
+if (NOT CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  set(CMAKE_INSTALL_PREFIX ${install_dir})
+endif()
 
 message(STATUS "Building for ${tri_triplet}")
 message(STATUS "Extern include dir: ${extern_include_dir}")

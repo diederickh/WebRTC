@@ -1,3 +1,4 @@
+#include <uv.h>
 #include <ice/Utils.h>
 
 namespace ice {
@@ -14,6 +15,33 @@ namespace ice {
     }
 
     return s;
+  }
+
+  std::vector<std::string> get_interface_addresses() {
+    std::vector<std::string> result;
+    char buf[512];
+    int count, i;
+    uv_interface_address_t* info;
+    uv_interface_addresses(&info, &count);
+
+    for (i = 0; i < count; ++i) {
+
+      /* skip internal ones, e.g. loopback . */
+      uv_interface_address_t iface = info[i];
+      if (0 != iface.is_internal) {
+        continue;
+      }
+
+      /* IP4 type addresses. */
+      if (iface.address.address4.sin_family == AF_INET) {
+        uv_ip4_name(&iface.address.address4, buf, sizeof(buf));
+        result.push_back(buf);
+      }
+    }
+
+    uv_free_interface_addresses(info, count);
+
+    return result;
   }
 
 } /* namespace ice */

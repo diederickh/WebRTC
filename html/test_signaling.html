@@ -1,0 +1,44 @@
+<!-- /* -*- mode: web -*- */ -->
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <title>WebRTC</title>
+  <link href="//fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="style.css"></link>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+  <script src="https://apprtc.appspot.com/js/adapter.js"></script>
+  <script src="signaling.js"></script>
+  <script>
+
+   var conn = null;
+   var err = false;
+
+   function init() {
+     
+     var s = new Signaling();
+
+     s.onconnect = function() { 
+       s.join("party");
+     }
+
+     s.onjoin = function(sdp) {
+       console.log(sdp);
+     }       
+
+     s.connect("ws://localhost:9001");
+   }
+
+   $(document).ready(function() {
+     init();
+   });
+  </script>
+
+</head>
+<body>
+  <div id="container">
+    <h1>libwebrtc signaling example</h1>
+    <button id="send_data">Send data</button>
+    <p>
+    </p>
+  </div> <!-- container -->
+</body>
