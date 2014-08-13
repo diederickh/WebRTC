@@ -7,7 +7,7 @@
 #include <video/WriterIVF.h>
 #include <uv.h>
 
-#define USE_SEND 1         /* Enable sending of VP8 data */
+#define USE_SEND 0         /* Enable sending of VP8 data */
 
 video::AggregatorVP8* aggregator;
 ice::Agent* agent;
@@ -56,7 +56,7 @@ int main() {
 
   video_stream->on_rtp = on_rtp_data;
   video_stream->user_rtp = aggregator;
-  video_stream->addLocalCandidate(new ice::Candidate("192.168.0.194", 59976));
+  video_stream->addLocalCandidate(new ice::Candidate("127.0.0.1", 59976));
   //video_stream->addLocalCandidate(new ice::Candidate("127.0.0.1", 10001));
 
   /* add the stream to the agent */

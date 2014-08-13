@@ -1,3 +1,4 @@
+#include <string.h>
 #include <stun/Reader.h>
 #include <openssl/engine.h>
 #include <openssl/hmac.h>

@@ -1,6 +1,7 @@
 #ifndef SDP_READER_H
 #define SDP_READER_H
 
+#include <stdio.h>
 #include <string>
 #include <sstream>
 #include <exception>

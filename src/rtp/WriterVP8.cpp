@@ -1,6 +1,7 @@
 #include <uv.h> /* @todo remove, tmp used to keep track of timestamp */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <rtp/WriterVP8.h>
 

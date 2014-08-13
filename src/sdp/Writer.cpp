@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <sdp/Writer.h>
 
 namespace sdp {

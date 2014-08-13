@@ -15,6 +15,9 @@ endif()
 
 #add_definitions("-fsanitize-address-zero-base-shadow")
 #add_definitions("-fsanitize=address")
+if (UNIX AND NOT APPLE)
+  add_definitions("-std=c++0x")
+endif()
 
 include_directories(
   ${CMAKE_CURRENT_LIST_DIR}/../src
@@ -61,12 +64,20 @@ set(app_libs
   ${extern_lib_dir}/libcrypto.a                        # for hmac/sha/ssl
   ${extern_lib_dir}/libuv.a                            # for networking
   ${extern_lib_dir}/libz.a                             # for crc32
-  ${extern_lib_dir}/libjansson.a                       # for signaling, parsing json messages
-  ${extern_lib_dir}/libwebsockets.a                    # for signaling, handling i/o
+#  ${extern_lib_dir}/libjansson.a                       # for signaling, parsing json messages
+#  ${extern_lib_dir}/libwebsockets.a                    # for signaling, handling i/o
   ${extern_lib_dir}/libsrtp.a                          # used to handle SRTP packets.
   ${extern_lib_dir}/libvpx.a                           # encoding/decoding vp8
   ${extern_lib_dir}/libvideogenerator.a                # used for test purposes; 
 )
+
+if (UNIX AND NOT APPLE)
+  list(APPEND app_libs
+    pthread
+    dl
+    )
+endif()
+
 
 add_library(${lib} STATIC ${lib_sources})
 install(TARGETS ${lib} ARCHIVE DESTINATION lib)
@@ -112,11 +123,11 @@ add_executable("${test}${debug}" ${sd}/${test}.cpp)
 target_link_libraries("${test}${debug}" ${lib} ${app_libs})
 install(TARGETS "${test}${debug}" DESTINATION bin)
 
-set(test test_libwebsockets)
-add_executable("${test}${debug}" ${sd}/${test}.cpp)
-set_target_properties("${test}${debug}" PROPERTIES COMPILE_FLAGS "-std=c++0x")
-target_link_libraries("${test}${debug}" ${lib} ${app_libs})
-install(TARGETS "${test}${debug}" DESTINATION bin)
+# set(test test_libwebsockets)
+# add_executable("${test}${debug}" ${sd}/${test}.cpp)
+# set_target_properties("${test}${debug}" PROPERTIES COMPILE_FLAGS "-std=c++0x")
+# target_link_libraries("${test}${debug}" ${lib} ${app_libs})
+# install(TARGETS "${test}${debug}" DESTINATION bin)
 
 set(test test_dtls)
 add_executable("${test}${debug}" ${sd}/${test}.c)

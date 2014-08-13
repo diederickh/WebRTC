@@ -9,6 +9,14 @@
   - create a self signed certificate
   - extract the fingerprint from the key
 
+  Usage:
+  ------
+  Make sure you have created the ssl certificates:
+  ---
+         openssl req -x509 -newkey rsa:2048 -days 3650 -nodes -keyout client-key.pem -out client-cert.pem
+         openssl req -x509 -newkey rsa:2048 -days 3650 -nodes -keyout server-key.pem -out server-cert.pem
+  ---     
+
   References
   ----------
   - Example code + indepth explanation by Nathan: http://stackoverflow.com/questions/256405/programmatically-create-x509-certificate-using-openssl  
@@ -17,6 +25,7 @@
   - Example by myself I worked on way back based on another example: https://gist.github.com/roxlu/4cc4534be340c82433db
 
  */
+#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 #include <openssl/ssl.h>

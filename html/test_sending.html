@@ -167,7 +167,8 @@
     </p>
     <ol>
       <li>Open a console into this directory.</li>
-      <li>Type: "python -m SimpleHTTPServer 8080"</li>
+      <li>Python2 type: "python -m SimpleHTTPServer 8080"</li>
+      <li>Python3 type: "python -m http.server 8080"</li>
       <li>Open: http://localhost:8080/test_sending.html</li>
     </ol>
 
@@ -180,7 +181,7 @@
     <video id="receive_video" width="320" height="240"> </video>
 
     <h3>Server information</h3>
-    <label for="server_ip">IP</label><input type="text" id="server_ip" placeholder="IP" value="192.168.0.194"></input><br>
+    <label for="server_ip">IP</label><input type="text" id="server_ip" placeholder="IP" value="127.0.0.1"></input><br>
     <label for="server_port">Port</label><input type="text" id="server_port" placeholder="Port" value="59976""></input><br>
     <label for="server_fingerprint">Fingerprint</label><input type="text" id="server_fingerprint" placeholder="Fingerprint" value="sha-256 3C:A8:D2:9B:34:9C:F1:94:F5:FD:AD:61:1D:79:21:4D:75:32:23:BB:ED:2E:85:02:79:C9:80:1D:A8:BB:A9:8A" class="big"></input><br>
     <label for="server_ufrag">ice-ufrag</label><input type="text" id="server_ufrag" placeholder="ice-ufrag"" value="5PN2qmWqBl"></input><br>

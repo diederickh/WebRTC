@@ -1,6 +1,7 @@
+#include <zlib.h>
+#include <stdio.h>
 #include <stun/Message.h>
 #include <stun/Utils.h>
-#include <zlib.h>
 
 namespace stun {
 
