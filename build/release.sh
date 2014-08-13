@@ -22,9 +22,17 @@ cmake -DCMAKE_BUILD_TYPE=Release ../
 cmake --build . --target install
 
 if [ "$(uname)" == "Darwin" ] ; then 
+    export PATH=${d}/../install/mac-clang-x86_64/bin/:${PATH}
     cd ./../../install/mac-clang-x86_64/bin/
+    if [ ! -f server-key.pem ] ; then
+         openssl req -x509 -newkey rsa:2048 -days 3650 -nodes -subj "/C=/ST=/L=/O=/CN=roxlu.com" -keyout server-key.pem -out server-cert.pem
+    fi
 else
+    export PATH=${d}/../install/linux-gcc-x86_64/bin/:${PATH}
     cd ./../../install/linux-gcc-x86_64/bin/
+    if [ ! -f server-key.pem ] ; then
+         openssl req -x509 -newkey rsa:2048 -days 3650 -nodes -subj "/C=/ST=/L=/O=/CN=roxlu.com" -keyout server-key.pem -out server-cert.pem
+    fi
 fi
 
 #./test_ice
