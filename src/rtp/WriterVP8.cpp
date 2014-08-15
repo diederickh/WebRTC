@@ -86,7 +86,7 @@ namespace rtp {
     rtp.sequence_number = seqnum;                                    /* RTP: sequence number. */
     rtp.timestamp = pkt->data.frame.pts * 90;                        /* RTP: timestamp: 90hz. */
     rtp.ssrc = ssrc;                                                 /* RTP: ssrc */
-    rtp.payload_type = 100;
+    rtp.payload_type = 120;
     rtp.PID = pkt->data.frame.partition_id;                          /* RTP VP8: partition index. */
     rtp.S = 1;                                                       /* RTP VP8: start of first VP8 partition */
     rtp.X = 1;                                                       /* RTP VP8: extended control bits are present. */ 

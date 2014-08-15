@@ -251,7 +251,7 @@ namespace ice {
 
     /* session part */
     ss << "v=0\r\n"
-       << "o=- " << uv_hrtime() << rand() << " 1 IN IP4 127.0.0.1\r\n"
+       << "o=- " << uv_hrtime() << " 1 IN IP4 127.0.0.1\r\n"
        << "s=roxlu-webrtc\r\n"
        << "t=0 0\r\n"
        << "a=ice-lite\r\n";
