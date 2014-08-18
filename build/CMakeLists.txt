@@ -75,8 +75,6 @@ set(app_libs
   ${extern_lib_dir}/libcrypto.a                        # for hmac/sha/ssl
   ${extern_lib_dir}/libuv.a                            # for networking
   ${extern_lib_dir}/libz.a                             # for crc32
-#  ${extern_lib_dir}/libjansson.a                       # for signaling, parsing json messages
-#  ${extern_lib_dir}/libwebsockets.a                    # for signaling, handling i/o
   ${extern_lib_dir}/libsrtp.a                          # used to handle SRTP packets.
   ${extern_lib_dir}/libvpx.a                           # encoding/decoding vp8
   ${extern_lib_dir}/libvideogenerator.a                # used for test purposes; 
@@ -89,6 +87,8 @@ if (UNIX AND NOT APPLE)
     )
 endif()
 
+set(webrtc_sources ${lib_sources})
+set(webrtc_libs ${app_libs})
 
 add_library(${lib} STATIC ${lib_sources})
 install(TARGETS ${lib} ARCHIVE DESTINATION lib)

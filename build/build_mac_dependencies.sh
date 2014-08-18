@@ -112,7 +112,6 @@ if [ ! -f ${bd}/src/mongoose.c ] ; then
     cp ${sd}/mongoose/mongoose.h ${bd}/include/
 fi
 
-
 # Download net_skeleton (signaling)
 if [ ! -d ${sd}/net_skeleton ] ; then 
     cd ${sd}
@@ -123,7 +122,6 @@ if [ ! -f ${bd}/src/net_skeleton.c ] ; then
     cp ${sd}/net_skeleton/net_skeleton.c ${bd}/src/
     cp ${sd}/net_skeleton/net_skeleton.h ${bd}/include/
 fi
-
 
 # Download ssl_wrapper (signaling)
 if [ ! -d ${sd}/ssl_wrapper ] ; then 
