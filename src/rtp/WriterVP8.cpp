@@ -50,7 +50,6 @@ namespace rtp {
       start_time = uv_hrtime();
     }
     ts = ((uv_hrtime() - start_time) / (1000llu * 1000llu)) * 90;
-    printf("TIMESTAMP: %llu\n", ts);
     /* @todo - end */
     
 
@@ -109,7 +108,7 @@ namespace rtp {
 
       /* set RTP packet properties */
       rtp.sequence_number = seqnum;
-      rtp.marker = (packet_size < mtu) && (pkt->data.frame.flags & VPX_FRAME_IS_FRAGMENT) == 0;
+      rtp.marker = ((packet_size < mtu) && (pkt->data.frame.flags & VPX_FRAME_IS_FRAGMENT) == 0) ? 1 : 0;
 
       /* RTP header */
       buffer[0]  = (rtp.version      & 0x02) << 6;                   /* RTP: version */
@@ -142,8 +141,9 @@ namespace rtp {
       on_packet(&rtp, user);
 
 #if 1
-      printf("WriterVP8::packtize - verbose: X: %d, N: %d, S: %d, PID: %d, payload_type: %d, SSRC: %u"
+      printf("WriterVP8::packtize - verbose: Marker: %d, X: %d, N: %d, S: %d, PID: %d, payload_type: %d, SSRC: %u, "
              "I: %d, L: %d, T: %d, K: %d, M:%d, PictureID: %u, len: %u, timestamp: %u\n",
+             rtp.marker,
              rtp.X, rtp.N, rtp.S, rtp.PID, rtp.payload_type, rtp.ssrc,
              rtp.I, rtp.L, rtp.T, rtp.K, rtp.M, rtp.PictureID, rtp.nbytes, rtp.timestamp
            );
