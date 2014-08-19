@@ -15,9 +15,21 @@
 #define VIDEO_AGGREGATOR_VP8_H
 
 #include <rtp/PacketVP8.h>
+#include <string>
 #include <stdint.h>
 
+enum {
+  AGGREGATOR_VP8_ERR_PACKET = -1,
+  AGGREGATOR_VP8_ERR_PAYLOAD = -2,
+  AGGREGATOR_VP8_ERR_SEQNUM = -3,
+  AGGREGATOR_VP8_ERR_BUFLEN = -4,
+  AGGREGATOR_VP8_WANTS_MORE = 1,
+  AGGREGATOR_VP8_GOT_FRAME = 2
+};
+
 namespace video {
+
+  std::string aggregator_vp8_result_to_string(int r);
 
   class AggregatorVP8 {
   public:

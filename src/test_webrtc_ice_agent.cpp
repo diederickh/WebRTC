@@ -10,7 +10,7 @@
 #include <uv.h>
 
 #define USE_SEND 1                 /* Enable sending of VP8 data */
-#define USE_RECORDING 2            /* Records received video into .ivf file that you can concert to webm using e.g. avconv */
+#define USE_RECORDING 0            /* Records received video into .ivf file that you can concert to webm using e.g. avconv */
 #define RECORDING_MAX_FRAMES 4000  /* Once we've recorded this amount of frames we exit the application */
 
 video::AggregatorVP8* aggregator;
@@ -166,7 +166,7 @@ static void on_rtp_data(ice::Stream* stream,
 
 #if USE_RECORDING
   int r;
-  if (agg->addPacket(&pkt) == 1) {
+  if (agg->addPacket(&pkt) == AGGREGATOR_VP8_GOT_FRAME) {
     r = ivf->write(agg->buffer, agg->nbytes, ivf->nframes);
     if (ivf->nframes >= RECORDING_MAX_FRAMES) {
       ivf->close();

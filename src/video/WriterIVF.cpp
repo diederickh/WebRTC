@@ -3,8 +3,7 @@
 namespace video {
   
   WriterIVF::WriterIVF()
-    :nframes(0)
-  {
+    :nframes(0)  {
   }
   
   WriterIVF::~WriterIVF() {

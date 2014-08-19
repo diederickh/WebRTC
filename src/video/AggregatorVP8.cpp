@@ -37,25 +37,25 @@ namespace video {
 
     /* validate packet. */
     if (NULL == pkt) {
-      return -1;
+      return AGGREGATOR_VP8_ERR_PACKET;
     }
 
     if (0 == pkt->nbytes || NULL == pkt->payload) {
-      return -1;
+      return AGGREGATOR_VP8_ERR_PAYLOAD;
     }
     
     /* are the sequence number incrementing monotonically */
     if (prev_seqnum != 0 && prev_seqnum != (pkt->sequence_number - 1)) {
       pos = 0;
       prev_seqnum = pkt->sequence_number;
-      return -1;
+      return AGGREGATOR_VP8_ERR_SEQNUM;
     }
 
     /* check for buffer overflow */
     new_pos = pos + pkt->nbytes;
     if (new_pos >= capacity) {
       printf("AggregatorVP8 - error: cannot write because the frame is too large for our buffer.\n");
-      return -1;
+      return AGGREGATOR_VP8_ERR_BUFLEN;
     }
 
     /* copy the data */
@@ -65,13 +65,25 @@ namespace video {
     pos += pkt->nbytes;
 
     if (1 == pkt->marker) {
-      printf("----------------------------------- GOT A COMPLETE FRAME!!! ------------------------- \n");
       nbytes = pos;
       pos = 0;
-      return 1;
+      return AGGREGATOR_VP8_GOT_FRAME;
     }
 
-    return 0;
+    return AGGREGATOR_VP8_WANTS_MORE;
   }
+
+  std::string aggregator_vp8_result_to_string(int r) {
+    switch(r) {
+      case AGGREGATOR_VP8_ERR_PACKET: { return "AGGREGATOR_VP8_ERR_PACKET"; }
+      case AGGREGATOR_VP8_ERR_PAYLOAD: { return "AGGREGATOR_VP8_ERR_PAYLOAD"; }
+      case AGGREGATOR_VP8_ERR_SEQNUM: { return "AGGREGATOR_VP8_ERR_SEQNUM"; }
+      case AGGREGATOR_VP8_ERR_BUFLEN: { return "AGGREGATOR_VP8_ERR_BUFLEN"; }
+      case AGGREGATOR_VP8_WANTS_MORE: { return "AGGREGATOR_VP8_WANTS_MORE"; }
+      case AGGREGATOR_VP8_GOT_FRAME: { return "AGGREGATOR_VP8_GOT_FRAME"; }
+      default: { return "unknown"; }
+    }
+  }
+
 
 } /* namespace video */

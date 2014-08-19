@@ -16,7 +16,8 @@ namespace rtp {
     if (!nbytes) { return -2; } 
     if (!pkt) { return -3; } 
 
-    /* RTP Heoader */
+
+    /* RTP Header */
     pkt->version         = (buf[0] & 0xC0) >> 6;
     pkt->padding         = (buf[0] & 0x20) >> 4;
     pkt->extension       = (buf[0] & 0x10) >> 3;
@@ -26,7 +27,7 @@ namespace rtp {
     pkt->sequence_number = ntohs(*(uint16_t*)(buf + 2));
     pkt->timestamp       = ntohl(*(uint32_t*)(buf + 4));
     pkt->ssrc            = ntohl(*(uint32_t*)(buf + 8));
-    
+
     if (pkt->csrc_count != 0) {
       printf("ReaderVP::process - error: the csrc_count != 0, we only implemented support for csrc_count === 0.\n");
       return -4;
@@ -77,6 +78,7 @@ namespace rtp {
     pkt->payload = buf;
     pkt->nbytes = len;
 
+#if 0
     printf("ReaderVP8::process - verbose: version: %d, "
                       "padding: %d, extension: %d, csrc_count: %d, "
                       "marker: %d, sequence: %u, timestamp: %u, ssrc: %u, payload_type: %u\n",
@@ -89,6 +91,7 @@ namespace rtp {
            pkt->X, pkt->N, pkt->S, pkt->PID,
            pkt->I, pkt->L, pkt->T, pkt->K, pkt->M, pkt->PictureID, pkt->nbytes
            );
+#endif
 
     return 0;
   }

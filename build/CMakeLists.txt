@@ -55,6 +55,7 @@ set(lib_sources
   ${sd}/video/AggregatorVP8.cpp
   ${sd}/video/WriterIVF.cpp
   ${sd}/video/EncoderVP8.cpp
+  ${sd}/video/DecoderVP8.cpp
   ${sd}/video/EncoderSettings.cpp
 
   # signaling
@@ -90,77 +91,27 @@ endif()
 set(webrtc_sources ${lib_sources})
 set(webrtc_libs ${app_libs})
 
+macro(create_test name)
+  add_executable("test_webrtc_${name}${debug}" ${sd}/test_webrtc_${name}.cpp)
+  target_link_libraries("test_webrtc_${name}${debug}" ${lib} ${app_libs})
+  install(TARGETS "test_webrtc_${name}${debug}" DESTINATION bin)
+endmacro()
+
 add_library(${lib} STATIC ${lib_sources})
 install(TARGETS ${lib} ARCHIVE DESTINATION lib)
 install(DIRECTORY ${lib_headers} DESTINATION include)
 
-set(test test_ice)
-add_executable("${test}${debug}" ${sd}/${test}.cpp)
-target_link_libraries("${test}${debug}" ${lib} ${app_libs})
-install(TARGETS "${test}${debug}" DESTINATION bin)
-
-set(test test_ssl_fingerprint)
-add_executable("${test}${debug}" ${sd}/${test}.cpp)
-target_link_libraries("${test}${debug}" ${lib} ${app_libs})
-install(TARGETS "${test}${debug}" DESTINATION bin)
-
-set(test test_hmac_sha1)
-add_executable("${test}${debug}" ${sd}/${test}.cpp)
-target_link_libraries("${test}${debug}" ${lib} ${app_libs})
-install(TARGETS "${test}${debug}" DESTINATION bin)
-
-set(test test_stun_message_integrity)
-add_executable("${test}${debug}" ${sd}/${test}.cpp)
-target_link_libraries("${test}${debug}" ${lib} ${app_libs})
-install(TARGETS "${test}${debug}" DESTINATION bin)
-
-set(test test_zlib_crc32)
-add_executable("${test}${debug}" ${sd}/${test}.cpp)
-target_link_libraries("${test}${debug}" ${lib} ${app_libs})
-install(TARGETS "${test}${debug}" DESTINATION bin)
-
-set(test test_stun_message_fingerprint)
-add_executable("${test}${debug}" ${sd}/${test}.cpp)
-target_link_libraries("${test}${debug}" ${lib} ${app_libs})
-install(TARGETS "${test}${debug}" DESTINATION bin)
-
-set(test test_openssl_load_key_and_cert)
-add_executable("${test}${debug}" ${sd}/${test}.cpp)
-target_link_libraries("${test}${debug}" ${lib} ${app_libs})
-install(TARGETS "${test}${debug}" DESTINATION bin)
-
-set(test test_ice_agent)
-add_executable("${test}${debug}" ${sd}/${test}.cpp)
-target_link_libraries("${test}${debug}" ${lib} ${app_libs})
-install(TARGETS "${test}${debug}" DESTINATION bin)
-
-# set(test test_libwebsockets)
-# add_executable("${test}${debug}" ${sd}/${test}.cpp)
-# set_target_properties("${test}${debug}" PROPERTIES COMPILE_FLAGS "-std=c++0x")
-# target_link_libraries("${test}${debug}" ${lib} ${app_libs})
-# install(TARGETS "${test}${debug}" DESTINATION bin)
-
-set(test test_dtls)
-add_executable("${test}${debug}" ${sd}/${test}.c)
-target_link_libraries("${test}${debug}" ${lib} ${app_libs})
-install(TARGETS "${test}${debug}" DESTINATION bin)
-
-set(test test_extract_keying_info_for_srtp)
-add_executable("${test}${debug}" ${sd}/${test}.cpp)
-target_link_libraries("${test}${debug}" ${lib} ${app_libs})
-install(TARGETS "${test}${debug}" DESTINATION bin)
-
-set(test test_video_encoder)
-add_executable("${test}${debug}" ${sd}/${test}.cpp)
-target_link_libraries("${test}${debug}" ${lib} ${app_libs})
-install(TARGETS "${test}${debug}" DESTINATION bin)
-
-set(test test_mongoose)
-add_executable("${test}${debug}" ${sd}/${test}.cpp)
-target_link_libraries("${test}${debug}" ${lib} ${app_libs})
-install(TARGETS "${test}${debug}" DESTINATION bin)
-
-set(test test_signaling)
-add_executable("${test}${debug}" ${sd}/${test}.cpp)
-target_link_libraries("${test}${debug}" ${lib} ${app_libs})
-install(TARGETS "${test}${debug}" DESTINATION bin)
+# temporary disable the webrtc tests
+create_test(ice)
+create_test(ssl_fingerprint)
+create_test(hmac_sha1)
+create_test(stun_message_integrity)
+create_test(zlib_crc32)
+create_test(stun_message_fingerprint)
+create_test(openssl_load_key_and_cert)
+create_test(ice_agent)
+create_test(dtls)
+create_test(extract_keying_info_for_srtp)
+create_test(video_encoder)
+create_test(mongoose)
+create_test(signaling)

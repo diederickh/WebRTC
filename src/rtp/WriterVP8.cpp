@@ -76,7 +76,6 @@ namespace rtp {
     }
 
     /* @todo the rtp.N (non-reference frame), should probably be set using a different flag, check out https://gist.github.com/roxlu/ceb1e8c95aff5ba60f45#file-vp8_impl-cc-L42 */
-       
 
     /* update the given PacketVP8 so it fits the RFC */
     rtp.version = 2;                                                 /* RTP: version. */  
@@ -85,7 +84,7 @@ namespace rtp {
     rtp.sequence_number = seqnum;                                    /* RTP: sequence number. */
     rtp.timestamp = pkt->data.frame.pts * 90;                        /* RTP: timestamp: 90hz. */
     rtp.ssrc = ssrc;                                                 /* RTP: ssrc */
-    rtp.payload_type = 120;
+    rtp.payload_type = 100; /* @todo extract the payload value from SDP! */
     rtp.PID = pkt->data.frame.partition_id;                          /* RTP VP8: partition index. */
     rtp.S = 1;                                                       /* RTP VP8: start of first VP8 partition */
     rtp.X = 1;                                                       /* RTP VP8: extended control bits are present. */ 
@@ -117,6 +116,7 @@ namespace rtp {
       buffer[0] |= (rtp.csrc_count   & 0x0f) << 0;                   /* RTP: csrc count */
       buffer[1]  = (rtp.marker       & 0x01) << 7;                   /* RTP: marker bit, last packet of frame */ 
       buffer[1] |= (rtp.payload_type & 0x7f) << 0;                   /* RTP: payload type */ 
+
       *(uint16_t*)(buffer + 2) = htons(rtp.sequence_number);         /* RTP: sequence number */
       *(uint32_t*)(buffer + 4) = htonl(rtp.timestamp);               /* RTP: timestamp */ 
       *(uint32_t*)(buffer + 8) = htonl(rtp.ssrc);                    /* RTP: ssrc */
@@ -140,21 +140,25 @@ namespace rtp {
       /* call the callback we have a new RTP packet. */
       on_packet(&rtp, user);
 
-#if 1
+#if 0
       printf("WriterVP8::packtize - verbose: Marker: %d, X: %d, N: %d, S: %d, PID: %d, payload_type: %d, SSRC: %u, "
-             "I: %d, L: %d, T: %d, K: %d, M:%d, PictureID: %u, len: %u, timestamp: %u\n",
+             "I: %d, L: %d, T: %d, K: %d, M:%d, PictureID: %u, len: %u, timestamp: %u, seqnum: %u\n",
              rtp.marker,
              rtp.X, rtp.N, rtp.S, rtp.PID, rtp.payload_type, rtp.ssrc,
-             rtp.I, rtp.L, rtp.T, rtp.K, rtp.M, rtp.PictureID, rtp.nbytes, rtp.timestamp
+             rtp.I, rtp.L, rtp.T, rtp.K, rtp.M, rtp.PictureID, rtp.nbytes, rtp.timestamp,
+             rtp.sequence_number
            );
 #endif
 
       rtp.S = 0; /* for all other the 'start of partition is 0', except first packet the S = 0. */
       seqnum++;
+
+      if (1 == rtp.marker) {
+        picture_id = (picture_id + 1) & 0x7FFF;
+      }
     }
 
     picture_id = (picture_id + 1) & 0x7FFF;
-
     return 0;
   }
 
